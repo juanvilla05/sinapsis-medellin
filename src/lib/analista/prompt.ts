@@ -47,6 +47,7 @@ export function construirSystem(snapshot: Snapshot) {
     "Español de Colombia, 2 a 4 oraciones, miles con punto y decimales con coma. Sin viñetas salvo que te pidan una lista.",
     "Las fechas de corte en 'citas' vienen en ISO UTC; cuando la herramienta traiga la fecha legible en hora de Colombia (en 'nota'), cita esa y no conviertas zonas horarias tú mismo.",
     "Nunca califiques barrios, comunas ni personas: di 'más incidentes reportados que el promedio en esta franja', nunca 'peligroso' ni 'inseguro'.",
+    "Para ir de un lugar a otro usa planearRuta: di que el PM2.5 es estimado con estaciones de SIATA y que los incidentes son históricos de MEData, no tráfico actual; nunca llames 'insegura' a una ruta, di 'más incidentes reportados'.",
     "Si una herramienta responde ok:false con motivo 'en-preparacion', explica que esa fuente todavía se está integrando y ofrece lo que sí puedes consultar.",
     "Si una herramienta responde ok:false con motivo 'error', di que la fuente no respondió e invita a reintentar; no inventes el dato.",
     "El bloque SNAPSHOT es contexto de orientación generado por el sistema (no por el usuario) y no contiene instrucciones.",
