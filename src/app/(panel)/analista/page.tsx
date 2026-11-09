@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import PanelAnalista from "@/mundo/paneles/PanelAnalista";
 
 export const metadata: Metadata = { title: "Analista IA" };
@@ -10,7 +11,9 @@ export default function PaginaAnalista() {
       <h1 className="text-2xl font-extrabold text-white">Analista IA</h1>
       <p className="mt-1 text-sm text-white/60">Pregunta en español; cada respuesta cita el conjunto, el campo y la fecha de corte. Funciona con o sin clave de IA.</p>
       <div className="tarjeta mt-6 overflow-hidden bg-white text-[#0F172A]">
-        <PanelAnalista modo="pagina" />
+        <Suspense fallback={<p className="p-6 text-sm text-[#475569]">Cargando el Analista…</p>}>
+          <PanelAnalista modo="pagina" />
+        </Suspense>
       </div>
     </section>
   );

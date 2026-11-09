@@ -1,0 +1,48 @@
+{
+  "comunas": {
+    "archivo": "comunas.geojson",
+    "nombre": "Comunas y corregimientos de Medellín (capa comunas_y_corregimientos)",
+    "publicador": "Alcaldía de Medellín · DAGRD (ArcGIS Online, acceso público)",
+    "url": "https://services1.arcgis.com/FZVaYraI7sEGQ6rF/arcgis/rest/services/comunas_y_corregimientos/FeatureServer/0/query?where=1%3D1&outFields=codigo,nombre&outSR=4326&maxAllowableOffset=0.0003&f=geojson",
+    "pagina": "https://geomedellin-m-medellin.opendata.arcgis.com/datasets/M-Medellin::comunas-y-corregimientos",
+    "item": "https://www.arcgis.com/sharing/rest/content/items/ef54074c904c4db897b2c4959747b23c?f=pjson",
+    "propietarioItem": "AMED_DAGRD_05",
+    "capturado": "2026-11-09T05:22:11-05:00",
+    "licencia": "no declarada",
+    "featuresOrigen": 23,
+    "features": 21,
+    "nota": "geometría simplificada en origen con maxAllowableOffset=0.0003; SN01/SN02 (polígonos sin nombre) eliminados"
+  },
+  "policia": {
+    "archivo": "policia-anio.json",
+    "nombre": "Homicidios en accidente de tránsito — Policía Nacional (ha6j-pa2r), filtrado a Medellín (codigo_dane = 05001000) y agregado por año",
+    "publicador": "Dirección General de la Policía Nacional - DIPON, Bogotá D.C.",
+    "url": "https://www.datos.gov.co/resource/ha6j-pa2r.json?$select=substring(fecha_hecho,7,4)%20as%20anio,count(*)%20as%20n,sum(cantidad::number)%20as%20victimas&$where=codigo_dane=%2705001000%27&$group=anio&$order=anio",
+    "pagina": "https://www.datos.gov.co/d/ha6j-pa2r",
+    "capturado": "2026-11-09T05:22:13-05:00",
+    "licencia": "Creative Commons Attribution | Share Alike 4.0 International (CC_40_BY_SA) — http://creativecommons.org/licenses/by-sa/4.0/legalcode",
+    "filasActualizadasFuente": "2026-09-01T15:24:46-05:00",
+    "filas": 17,
+    "nota": "la serie crece con cada carga de la Policía; el último año es parcial. anio sale de substring(fecha_hecho,7,4) porque fecha_hecho es texto DD/MM/AAAA"
+  },
+  "consolidado": {
+    "archivo": "consolidado-303.csv",
+    "espejo": "consolidado-303.json",
+    "nombre": "Consolidado cantidad de casos criminalidad en comunas por año",
+    "id": "1-027-23-000303",
+    "publicador": "MEData · Alcaldía de Medellín (SISC)",
+    "url": "https://medata.app.medellin.gov.co/sites/default/files/distribution/1-027-23-000303/consolidado_cantidad_casos_criminalidad_en_comunas_por_anio.csv",
+    "pagina": "https://medata.app.medellin.gov.co/dataset/1-027-23-000303",
+    "capturado": "2026-11-09T05:22:21-05:00",
+    "licencia": "https://creativecommons.org/licenses/by-sa/4.0/legalcode",
+    "modificadoPortal": "01-02-2025",
+    "encabezado": [
+      "Fecha_hecho",
+      "Conducta",
+      "Codigo_comuna",
+      "Cantidad_casos"
+    ],
+    "filas": 2569,
+    "nota": "Codigo_comuna llega como '10' y '10.0' (y 'SIN DATO'): se normaliza en src/lib/monitoreo/fuentes.ts"
+  }
+}
