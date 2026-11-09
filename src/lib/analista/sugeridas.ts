@@ -23,9 +23,9 @@ export const SUGERIDAS: Sugerida[] = [
   { texto: "¿Cuántos conjuntos de Movilidad están al día?", herramienta: "consultarFrescura", args: { secretaria: "Movilidad" } },
   { texto: "¿Qué estación de Medellín tiene peor aire ahora?", herramienta: "consultarAire", args: { ambito: "medellin" } },
   {
-    texto: "¿En qué comuna y hora hay más incidentes graves de motociclistas?",
+    texto: "¿En qué comunas hay más víctimas motociclistas en incidentes viales?",
     herramienta: "consultarSeguridadVial",
-    args: { condicion: "motociclista" },
+    args: { tema: "victimas", condicion: "motociclista" },
   },
   {
     texto: "¿Cuántas muertes viales hubo en 2023 según MEData y según la Policía?",

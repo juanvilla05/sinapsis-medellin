@@ -27,7 +27,7 @@ export default function PanelMonitoreo({ datos, modo = "modal" }: { datos: Datos
 
   return (
     <div className={`flex flex-col gap-5 ${modo === "pagina" ? "p-5 sm:p-7" : "p-6"}`}>
-      <div className="flex flex-wrap gap-1.5 border-b border-[#E3EAF3] pb-3" role="tablist" aria-label="Secciones de la Sala de Monitoreo">
+      <div className="grid grid-cols-3 gap-1.5 border-b border-[#E3EAF3] pb-3 sm:flex sm:flex-wrap" role="tablist" aria-label="Secciones de la Sala de Monitoreo">
         {PESTANAS.map((p) => {
           const activa = p.clave === pestana;
           return (
@@ -39,12 +39,12 @@ export default function PanelMonitoreo({ datos, modo = "modal" }: { datos: Datos
               aria-selected={activa}
               aria-controls={`${id}-panel-${p.clave}`}
               onClick={() => setPestana(p.clave)}
-              className={`flex flex-col items-start rounded-xl px-3.5 py-2 text-left transition-colors ${
+              className={`flex flex-col items-center rounded-xl px-2 py-2 text-center transition-colors sm:items-start sm:px-3.5 sm:text-left ${
                 activa ? "bg-[#1E3A5F] text-white" : "bg-[#F4F7FB] text-[#1E3A5F] hover:bg-[#E3EAF3]"
               }`}
             >
               <span className="text-[13.5px] font-bold">{p.texto}</span>
-              <span className={`text-[11px] ${activa ? "text-white/75" : "text-[#475569]"}`}>{p.detalle}</span>
+              <span className={`hidden text-[11px] sm:block ${activa ? "text-white/75" : "text-[#475569]"}`}>{p.detalle}</span>
             </button>
           );
         })}

@@ -25,10 +25,20 @@ export function colorSecuencial(t: number): string {
   return rgbAHex(BAJO[0] + (ALTO[0] - BAJO[0]) * k, BAJO[1] + (ALTO[1] - BAJO[1]) * k, BAJO[2] + (ALTO[2] - BAJO[2]) * k);
 }
 
+/**
+ * Fracción visual de una comuna: √(valor / máximo). La Candelaria (el Centro) concentra varias veces lo de
+ * cualquier otra comuna y una escala lineal dejaba al resto de la ciudad plana y del mismo tono. La leyenda
+ * lo declara ("altura y color ∝ √n"); la tabla siempre muestra la cifra exacta.
+ */
+export function fraccionComuna(valor: number | null, maximo: number): number {
+  if (valor === null || maximo <= 0) return 0;
+  return Math.sqrt(Math.min(1, Math.max(0, valor / maximo)));
+}
+
 /** Color de una comuna según su valor; null → gris "sin dato". */
 export function colorComuna(valor: number | null, maximo: number): string {
   if (valor === null) return COLOR_SIN_DATO;
-  return colorSecuencial(maximo > 0 ? valor / maximo : 0);
+  return colorSecuencial(fraccionComuna(valor, maximo));
 }
 
 /** Texto claro u oscuro legible sobre el color secuencial. */
@@ -37,10 +47,10 @@ export const tintaSobre = (t: number) => (t > 0.55 ? "#FFFFFF" : "#0F172A");
 export const ALTURA_MIN_COMUNA = 0.3;
 export const ALTURA_MAX_COMUNA = 8;
 
-/** Altura de extrusión de una comuna (lineal con el valor), 0,3–8 unidades; sin dato → la mínima. */
+/** Altura de extrusión de una comuna (∝ √n, ver `fraccionComuna`), 0,3–8 unidades; sin dato → la mínima. */
 export function alturaComuna(valor: number | null, maximo: number): number {
   if (valor === null || maximo <= 0) return ALTURA_MIN_COMUNA;
-  return ALTURA_MIN_COMUNA + (ALTURA_MAX_COMUNA - ALTURA_MIN_COMUNA) * Math.min(1, valor / maximo);
+  return ALTURA_MIN_COMUNA + (ALTURA_MAX_COMUNA - ALTURA_MIN_COMUNA) * fraccionComuna(valor, maximo);
 }
 
 export const ALTURA_MIN_CELDA = 0.25;

@@ -30,7 +30,7 @@ export default function Comunas3DVista({
   const estadoRef = useRef(estado);
   const [listo, setListo] = useState(false);
   const [tooltip, setTooltip] = useState<{ info: InfoTooltip; x: number; y: number; ancho: number } | null>(null);
-  const [render, setRender] = useState<InfoRender | null>(null);
+  const [, setRender] = useState<InfoRender | null>(null); // presupuesto de dibujo: solo para depurar (console.info)
 
   useEffect(() => {
     seleccionarRef.current = onSeleccionar;
@@ -67,7 +67,7 @@ export default function Comunas3DVista({
       })
       .catch((e: unknown) => {
         console.error("[comunas3d] no se pudo montar la escena", e);
-        if (vivo) falloRef.current(e instanceof Error ? e.message : "WebGL no disponible");
+        if (vivo) falloRef.current("WebGL o la carga de three.js no están disponibles en este navegador");
       });
     return () => {
       vivo = false;
@@ -115,7 +115,7 @@ export default function Comunas3DVista({
             ))}
           </span>
           <span className="font-mono">{miles(estado.comunas.maximo)}</span>
-          <span>{estado.comunas.unidad} por comuna (altura y color)</span>
+          <span>{estado.comunas.unidad} por comuna (altura y color ∝ √n)</span>
         </div>
         {estado.celdas && (
           <span>
@@ -123,11 +123,6 @@ export default function Comunas3DVista({
           </span>
         )}
         {estado.estaciones && <span>Faros: estaciones SIATA, color = categoría ICA (gris fuera de Medellín)</span>}
-        {render && (
-          <span className="font-mono text-[#64748B]">
-            {render.llamadas} llamadas de dibujo · {miles(render.triangulos)} triángulos
-          </span>
-        )}
       </div>
     </div>
   );

@@ -255,6 +255,11 @@ export default function PestanaComunas({ datos }: { datos: DatosMundo }) {
               <>
                 <Chips etiqueta="Año" opciones={aniosChips} valor={filtros.anio === "todos" ? "todos" : String(filtros.anio)} onChange={(a) => cambiar({ anio: a === "todos" ? "todos" : Number(a) })} />
                 <Chips etiqueta="Franja horaria" opciones={franjasChips} valor={filtros.franja} onChange={(franja) => cambiar({ franja })} />
+                {filtros.capa === "hurto" && (
+                  <span className="text-[11.5px] leading-snug text-[#475569]">
+                    Las franjas cuentan toda la ciudad, incluidos los casos sin comuna registrada; por eso suman más que las modalidades por comuna.
+                  </span>
+                )}
                 {filtros.capa === "incidentes" && <Chips etiqueta="Gravedad" opciones={gravedadChips} valor={filtros.gravedad} onChange={(gravedad) => cambiar({ gravedad })} />}
                 {filtros.capa === "victimas" && (
                   <>
