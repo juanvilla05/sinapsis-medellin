@@ -264,7 +264,7 @@ export default function Laboratorio({ opciones, destacados }: { opciones: Opcion
                 onClick={descargar}
                 className="mt-4 rounded-full bg-[#3dd6c6] px-4 py-2 text-sm font-bold text-[#04211e] hover:brightness-110"
               >
-                Descargar muestra limpia (CSV)
+                Descargar muestra limpia (sin columnas personales)
               </button>
             </section>
           </div>
