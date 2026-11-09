@@ -53,7 +53,7 @@ export const DESPACHOS: Despacho[] = [
     corto: "Analista",
     descripcion: "Pregunta en español y obtén la respuesta calculada sobre datos limpios, citando conjunto, campo y fecha de corte.",
     ruta: "/analista",
-    listo: false,
+    listo: true,
     x: 1010,
     y: 520,
     color: "#60a5fa",
