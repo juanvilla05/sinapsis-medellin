@@ -62,7 +62,7 @@ src/data/                resultados guardados del pipeline
 ## Datos y fuentes
 
 - **MEData — Alcaldía de Medellín**: catálogo `https://medata.app.medellin.gov.co/api/1/metastore/schemas/dataset/items` y archivos CSV de cada conjunto. Uso según los términos del portal de datos abiertos.
-- No se almacenan ni se publican datos personales: el Laboratorio procesa muestras en memoria y solo devuelve diagnósticos y unas pocas filas de ejemplo.
+- No se almacenan ni se publican datos personales: el Laboratorio procesa muestras en memoria y solo devuelve diagnósticos y unas pocas filas de ejemplo. Las columnas con datos personales o cuasi-identificadores (nombre, documento, placa, teléfono, sexo, edad, dirección, coordenadas…) se detectan por token del encabezado, salen como "•••" en el ejemplo y fuera del CSV descargable; las horas se redondean a la hora en punto (se conservan fecha y barrio).
 
 ## Uso de IA
 

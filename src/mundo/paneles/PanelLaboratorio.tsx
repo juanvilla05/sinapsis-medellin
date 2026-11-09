@@ -273,7 +273,7 @@ export default function PanelLaboratorio({
                 onClick={descargar}
                 className="mt-1 self-start rounded-[9px] border border-[#2563EB] bg-[#EFF6FF] px-3 py-2 text-[12.5px] font-bold text-[#1E3A5F]"
               >
-                ↓ Descargar CSV limpio
+                ↓ Descargar muestra limpia (sin columnas personales ni horas exactas)
               </button>
             )}
           </div>
