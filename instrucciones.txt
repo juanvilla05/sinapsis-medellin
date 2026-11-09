@@ -1,6 +1,6 @@
 INSTRUCCIONES - SINAPSIS · Centro de Inteligencia de Datos de Medellín (con PULSO · la ciudad en vivo)
 Equipo: SINAPSIS (Isabela Zuluaga y Juan Camilo Villa) · Hackathon de Datos ITM 2026
-Modalidad: Visualización · Repositorio: https://github.com/zuluagaisabela/sinapsis-medellin
+Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsis-medellin
 
 1. QUÉ ES
    PULSO · Medellín en vivo: un mapa 3D de Medellín con el aire de SIATA en vivo, la seguridad vial y
@@ -11,15 +11,15 @@ Modalidad: Visualización · Repositorio: https://github.com/zuluagaisabela/sina
    puede) saber hoy con ellos sobre la ciudad?
 
 2. PROBARLO EN LÍNEA (recomendado, no requiere cuenta)
-   Abrir https://sinapsis-medellin.vercel.app
-   La Alpujarra 3D (calidad de los datos): https://sinapsis-medellin.vercel.app/alpujarra
-   Versión sin 3D (panel ejecutivo): https://sinapsis-medellin.vercel.app/panel
+   Abrir https://sinapsis-pulso.vercel.app
+   La Alpujarra 3D (calidad de los datos): https://sinapsis-pulso.vercel.app/alpujarra
+   Versión sin 3D (panel ejecutivo): https://sinapsis-pulso.vercel.app/panel
 
 3. EJECUTARLO EN EL COMPUTADOR
    Requisitos: Node.js 20 o superior (probado con Node 24), navegador con WebGL y conexión a internet.
    No necesita ninguna clave: el mapa y los datos funcionan sin claves; sin clave de IA PulsoBot
    responde en "modo directo" con las mismas herramientas.
-   git clone https://github.com/zuluagaisabela/sinapsis-medellin.git
+   git clone https://github.com/juanvilla05/sinapsis-medellin.git
    cd sinapsis-medellin
    npm install
    npm run dev
