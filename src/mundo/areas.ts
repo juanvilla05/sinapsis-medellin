@@ -72,3 +72,14 @@ export function fechaColombia(iso: string) {
   const d = new Date(new Date(iso).getTime() - 5 * 3600_000);
   return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
 }
+const dos = (n: number) => String(n).padStart(2, "0");
+/** "HH:MM" en hora de Colombia (UTC-5), para «última lectura HH:MM». */
+export function horaColombia(iso: string) {
+  const d = new Date(new Date(iso).getTime() - 5 * 3600_000);
+  return `${dos(d.getUTCHours())}:${dos(d.getUTCMinutes())}`;
+}
+/** "DD-MM HH:MM" en hora de Colombia, para «copia guardada del DD-MM HH:MM». */
+export function fechaHoraCorta(iso: string) {
+  const d = new Date(new Date(iso).getTime() - 5 * 3600_000);
+  return `${dos(d.getUTCDate())}-${dos(d.getUTCMonth() + 1)} ${horaColombia(iso)}`;
+}

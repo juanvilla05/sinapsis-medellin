@@ -12,6 +12,15 @@ import Sugeridas from "./analista/Sugeridas";
 
 export type ModoPanel = "modal" | "pagina";
 
+export interface PropsPanelAnalista {
+  modo?: ModoPanel;
+  /**
+   * Contrato con el mundo 3D: se llama una vez por cada respuesta terminada (chat `onFinish` y cada
+   * consulta directa que pasa a `listo`). ExperienciaMundo cuenta con esto las preguntas del Analista.
+   */
+  onRespuesta?: () => void;
+}
+
 type EstadoIa = "detectando" | "si" | "no";
 
 interface EntradaDirecta {
@@ -40,7 +49,7 @@ function horaColombia(d = new Date()) {
  * Detecta la IA en el cliente (GET /api/analista); sin clave o si la IA falla, las mismas
  * preguntas se responden en modo directo (POST /api/analista/directo) sin modelo de lenguaje.
  */
-export default function PanelAnalista({ modo = "modal" }: { modo?: ModoPanel }) {
+export default function PanelAnalista({ modo = "modal", onRespuesta }: PropsPanelAnalista) {
   const [estadoIa, setEstadoIa] = useState<EstadoIa>("detectando");
   const [modelo, setModelo] = useState<string | null>(null);
   const [iaCaida, setIaCaida] = useState<string | null>(null); // texto del aviso cuando la IA no respondió
@@ -51,11 +60,13 @@ export default function PanelAnalista({ modo = "modal" }: { modo?: ModoPanel }) 
   const finRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(0); // mensajes del chat al momento de lanzar una consulta directa
   const ejecutarDirectoRef = useRef<(p: string, h: NombreHerramienta, a: Record<string, unknown>) => void>(() => {});
+  const onRespuestaRef = useRef<(() => void) | undefined>(undefined);
 
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/analista" }), []);
   const { messages, sendMessage, status, stop } = useChat({
     id: "analista", // id estable: evita Math.random() en el prerender (Cache Components)
     transport,
+    onFinish: () => onRespuestaRef.current?.(),
     onError: () => {
       // La IA no respondió (sin clave en caliente, cuota, red): avisamos y caemos a modo directo con la misma intención.
       setIaCaida(`La IA no respondió a las ${horaColombia()}. Las preguntas siguen en modo directo, con las mismas herramientas.`);
@@ -108,10 +119,14 @@ export default function PanelAnalista({ modo = "modal" }: { modo?: ModoPanel }) 
         aviso = { motivo: "error", detalle: `El servidor no respondió a las ${horaColombia()}. Revisa la conexión e intenta de nuevo.` };
       }
       setDirectos((ds) => ds.map((d) => (d.id === id ? { ...d, estado: "listo", respuesta, aviso } : d)));
+      onRespuestaRef.current?.();
     },
     [],
   );
   // Los refs se actualizan fuera del render (regla react-hooks/refs).
+  useEffect(() => {
+    onRespuestaRef.current = onRespuesta;
+  }, [onRespuesta]);
   useEffect(() => {
     ejecutarDirectoRef.current = ejecutarDirecto;
   }, [ejecutarDirecto]);
