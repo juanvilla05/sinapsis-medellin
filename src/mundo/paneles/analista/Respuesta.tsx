@@ -4,6 +4,10 @@ import { CATEGORIAS } from "@/lib/ica";
 import type { HurtoComunaConsulta, MuertesPorAnioConsulta, RankingComunas, SeguridadVialConsulta } from "@/lib/monitoreo/consultas";
 import { NOMBRES_HERRAMIENTAS, type NombreHerramienta } from "@/lib/analista/sugeridas";
 import type { EstadoFrescura } from "@/lib/catalogo";
+import type { DatosRuta } from "@/lib/rutas/planear";
+import { BANDAS, MODO_EN_FRASE } from "@/pulso/rutas/constantes";
+import { distanciaLegible, duracionLegible } from "@/pulso/rutas/formato";
+import VerEnMapa from "@/pulso/rutas/VerEnMapa";
 import { decimal, esFechaSoloDia, fechaColombia, miles } from "../../areas";
 
 const EST: Record<EstadoFrescura, { t: string; bg: string; fg: string }> = {
@@ -352,6 +356,46 @@ function CuerpoHurto({ d }: { d: HurtoComunaConsulta }) {
   );
 }
 
+function CuerpoRuta({ d }: { d: DatosRuta }) {
+  const rec = d.rutas.find((r) => r.recomendada) ?? d.rutas[0];
+  if (!rec) return <span className="text-[14px] text-[#0F172A]">Google no devolvió alternativas para este trayecto.</span>;
+  const otras = d.rutas.length - 1;
+  return (
+    <div className="flex flex-col gap-3.5">
+      <span className="break-words text-[13px] font-semibold text-[#1E3A5F]">
+        {d.origen.nombre} → {d.destino.nombre} · {MODO_EN_FRASE[d.modo]}
+      </span>
+      <CifraGrande
+        valor={`${rec.pm25Estimado !== null ? `${decimal(rec.pm25Estimado)} µg/m³` : "—"} · ${duracionLegible(rec.duracionS)}`}
+        texto={`PM2.5 estimado y tiempo de la ruta recomendada (${rec.etiqueta.replace(/^Ruta \d+ · /, "")}, ${distanciaLegible(rec.distanciaM)}): ${BANDAS[rec.banda].texto.toLowerCase()}${
+          rec.incidentesCercanos !== null ? `, ${miles(rec.incidentesCercanos)} incidentes viales históricos reportados cerca` : ""
+        }. Puntaje ${miles(rec.puntaje)} de 100${otras > 0 ? ` frente a ${otras === 1 ? "otra alternativa" : `otras ${otras} alternativas`}` : ""}.`}
+      />
+      <div className="flex flex-col gap-1.5">
+        {d.rutas.map((r) => (
+          <div key={r.id} className="flex flex-col gap-1 sm:grid sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto] sm:items-center sm:gap-2.5">
+            <span className={`truncate text-[13px] ${r.recomendada ? "font-bold text-[#1E3A5F]" : "text-[#0F172A]"}`} title={r.etiqueta}>
+              {r.etiqueta}
+            </span>
+            <div className="flex items-center gap-2.5 sm:contents">
+              <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded bg-[#F4F7FB]" aria-hidden="true">
+                <div className="h-full rounded" style={{ width: `${Math.max(4, r.puntaje)}%`, background: CATEGORIAS[r.banda].color }} />
+              </div>
+              <span className="whitespace-nowrap text-right font-mono text-[12.5px] text-[#0F172A]">
+                {miles(r.puntaje)} · {r.pm25Estimado !== null ? decimal(r.pm25Estimado) : "—"} µg/m³ · {duracionLegible(r.duracionS)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <span className="text-[12px] text-[#475569]">
+        Barra = puntaje 0–100 (45 % aire, 35 % incidentes históricos a menos de 150 m, 20 % tiempo), comparado entre alternativas.
+      </span>
+      <VerEnMapa rutas={d.rutas} origen={d.origen} destino={d.destino} />
+    </div>
+  );
+}
+
 function CuerpoGenerico({ datos }: { datos: unknown }) {
   return (
     <pre className="overflow-x-auto rounded-xl border border-[#E3EAF3] bg-[#F4F7FB] p-3 font-mono text-[11.5px] text-[#0F172A]">
@@ -410,6 +454,9 @@ export default function Respuesta({
       break;
     case "consultarHurtoComuna":
       cuerpo = <CuerpoHurto d={d as HurtoComunaConsulta} />;
+      break;
+    case "planearRuta":
+      cuerpo = <CuerpoRuta d={d as DatosRuta} />;
       break;
     default:
       cuerpo = <CuerpoGenerico datos={d} />;

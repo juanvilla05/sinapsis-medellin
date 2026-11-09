@@ -13,9 +13,11 @@ import {
   esquemaHurtoComuna as esquemaHurtoComunaMonitoreo,
   esquemaSeguridadVial as esquemaSeguridadVialMonitoreo,
 } from "@/lib/monitoreo/consultas";
+import { planearRuta as planearRutaPulso, type DatosRuta } from "@/lib/rutas/planear";
 import { obtenerAire } from "@/lib/siata";
 import { MUNICIPIOS_AMVA } from "@/lib/territorio";
 import { esFechaSoloDia, fechaColombia } from "@/mundo/areas";
+import { MODOS_RUTA } from "@/pulso/rutas/constantes";
 import { explicarFuentes, TEMAS_FAQ } from "./faq";
 import type { NombreHerramienta } from "./sugeridas";
 
@@ -428,6 +430,21 @@ const herramientaFuentes = definir<z.infer<typeof esquemaFuentes>, ReturnType<ty
   },
 });
 
+/* ───────────── planearRuta (PULSO · rutas inteligentes) ───────────── */
+
+const esquemaRuta = z.object({
+  origen: z.string().min(2).max(160).describe("Lugar de partida en el Valle de Aburrá, p. ej. 'La Alpujarra, Medellín'"),
+  destino: z.string().min(2).max(160).describe("Lugar de llegada en el Valle de Aburrá, p. ej. 'Parque Lleras, Medellín'"),
+  modo: z.enum(MODOS_RUTA).optional().describe("DRIVE (carro, por defecto) · TWO_WHEELER (moto) · BICYCLE (bici) · WALK (a pie)"),
+});
+
+const planearRuta = definir<z.infer<typeof esquemaRuta>, DatosRuta>({
+  descripcion:
+    "Planea una ruta de un lugar a otro en Medellín y el Valle de Aburrá: compara las alternativas de Google por PM2.5 estimado con SIATA en vivo, incidentes viales históricos cercanos (MEData) y tiempo, y marca la recomendada. Úsala cuando pidan ir de A a B, la ruta más limpia, con mejor aire o con menos incidentes reportados. Si el lugar no trae municipio, agrégale ', Medellín'.",
+  esquema: esquemaRuta,
+  ejecutar: (args) => planearRutaPulso(args),
+});
+
 /* ───────────── Registro ───────────── */
 
 export const REGISTRO = {
@@ -438,6 +455,7 @@ export const REGISTRO = {
   consultarHurtoComuna,
   limpiarConjunto,
   explicarFuentes: herramientaFuentes,
+  planearRuta,
 };
 
 // Comprobación de tipos: el registro cubre exactamente los nombres compartidos con el cliente.
