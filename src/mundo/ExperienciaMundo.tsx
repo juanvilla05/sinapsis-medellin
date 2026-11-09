@@ -6,6 +6,9 @@ import { AREAS_MUNDO, areaPorId, decimal, fechaColombia, miles, type IdArea } fr
 import PanelReloj from "./paneles/PanelReloj";
 import PanelLaboratorio, { type OpcionLab } from "./paneles/PanelLaboratorio";
 import PanelEnConstruccion from "./paneles/PanelEnConstruccion";
+import PanelMonitoreo from "./paneles/PanelMonitoreo";
+import PanelAnalista from "./paneles/PanelAnalista";
+import type { DatosMundo } from "./datos";
 
 interface MundoAPI {
   enter(): void;
@@ -34,12 +37,20 @@ function Isotipo() {
 export default function ExperienciaMundo({
   resumen,
   opcionesLab,
+  datos,
 }: {
   resumen: ResumenCatalogo;
   opcionesLab: OpcionLab[];
+  /** cifras reales que alimentan los edificios de secretarías, los agentes y la Sala de Monitoreo */
+  datos: DatosMundo;
 }) {
   const montaje = useRef<HTMLDivElement>(null);
   const mundo = useRef<MundoAPI | null>(null);
+  // los datos viven en un ref para que un re-render del padre no vuelva a construir el mundo
+  const datosRef = useRef(datos);
+  useEffect(() => {
+    datosRef.current = datos;
+  }, [datos]);
   const cerrarRef = useRef<HTMLButtonElement>(null);
   const [listo, setListo] = useState(false);
   const [fallo, setFallo] = useState(false);
@@ -78,6 +89,7 @@ export default function ExperienciaMundo({
         mundo.current = m.createWorld(montaje.current, {
           reducedMotion: reduce,
           fonts: { sans, mono },
+          datos: datosRef.current,
           onOpen: (id: IdArea) => abrir(id),
           onNear: (id: IdArea | null) => setCerca(id),
           onInside: (b: boolean) => setAdentro(b),
@@ -320,7 +332,9 @@ export default function ExperienciaMundo({
             {areaPanel.id === "lab" && (
               <PanelLaboratorio opciones={opcionesLab} reducido={reducido} onRescate={(n) => setRescatadas((r) => r + n)} />
             )}
-            {areaPanel.enConstruccion && <PanelEnConstruccion area={areaPanel} />}
+            {areaPanel.id === "monitoreo" && <PanelMonitoreo datos={datos} modo="modal" />}
+            {areaPanel.id === "analista" && <PanelAnalista modo="modal" />}
+            {areaPanel.id === "ventanilla" && <PanelEnConstruccion area={areaPanel} />}
           </div>
         </div>
       )}
