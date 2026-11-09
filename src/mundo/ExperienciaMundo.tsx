@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResumenCatalogo } from "@/lib/catalogo";
 import { AREAS_MUNDO, areaPorId, decimal, fechaColombia, miles, type IdArea } from "./areas";
@@ -256,7 +257,13 @@ export default function ExperienciaMundo({
               <span className="text-xs text-[#475569]">{estado}</span>
             </div>
           </div>
-          <div className={`${tarjeta} pointer-events-auto rounded-[14px] px-2.5 py-1.5`}>
+          <Link
+            href="/"
+            className={`${tarjeta} pointer-events-auto mr-auto flex items-center gap-2 self-center px-3.5 py-2 text-[13px] font-bold text-[#1E3A5F] transition-colors hover:bg-[#F4F7FB]`}
+          >
+            <span aria-hidden="true">←</span> PULSO en vivo
+          </Link>
+          <div className={`${tarjeta} pointer-events-auto hidden rounded-[14px] px-2.5 py-1.5 sm:block`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- logo oficial sin modificar */}
             <img src="/marca/logo-alcaldia.png" alt="Alcaldía de Medellín" className="h-10 w-[140px] object-contain" />
           </div>

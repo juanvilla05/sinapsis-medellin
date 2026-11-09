@@ -18,7 +18,7 @@ function Reloj() {
   return <span className="font-mono tabular-nums">{hora ?? "--:--"}</span>;
 }
 
-const pill = "rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors";
+const pill = "shrink-0 whitespace-nowrap rounded-full px-2.5 py-1.5 text-[13px] font-semibold transition-colors sm:px-3";
 
 /**
  * PULSO · Medellín en vivo: el mapa 3D ocupa toda la pantalla; encima flotan la barra, el panel de rutas y PulsoBot.
@@ -32,28 +32,30 @@ export default function PulsoEnVivo() {
     <div className="fixed inset-0 overflow-hidden bg-[#0B1220] text-white">
       <MapaPulso className="absolute inset-0" />
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-wrap items-start gap-2 p-3 sm:p-4">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0B1220]/80 px-3 py-2 backdrop-blur">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start gap-2 p-3 sm:p-4">
+        <div className="pointer-events-auto flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#0B1220]/80 px-3 py-2 backdrop-blur">
           <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#34D399] opacity-75 motion-reduce:hidden" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#34D399]" />
           </span>
           <span className="leading-tight">
             <span className="block text-[15px] font-extrabold tracking-[0.14em]">PULSO</span>
-            <span className="block text-[11px] text-white/65">Medellín en vivo · <Reloj /></span>
+            <span className="hidden text-[11px] text-white/65 sm:block">Medellín en vivo · <Reloj /></span>
           </span>
         </div>
-        <nav className="pointer-events-auto ml-auto flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#0B1220]/80 p-1 backdrop-blur [scrollbar-width:none]" aria-label="Secciones">
+        <nav className="pointer-events-auto ml-auto flex min-w-0 gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#0B1220]/80 p-1 backdrop-blur [scrollbar-width:none]" aria-label="Secciones">
           <button type="button" onClick={() => emitir({ tipo: "panel", panel: panel === "rutas" ? null : "rutas" })} className={`${pill} ${panel === "rutas" ? "bg-[#2563EB] text-white" : "text-white/80 hover:bg-white/10"}`}>
             Rutas
           </button>
           <button type="button" onClick={() => emitir({ tipo: "panel", panel: panel === "bot" ? null : "bot" })} className={`${pill} ${panel === "bot" ? "bg-[#2563EB] text-white" : "text-white/80 hover:bg-white/10"}`}>
-            Pregúntale a PULSO
+            <span className="sm:hidden">Preguntar</span>
+            <span className="hidden sm:inline">Pregúntale a PULSO</span>
           </button>
           <Link href="/alpujarra" className={`${pill} shrink-0 text-white/80 hover:bg-white/10`}>
-            Calidad de datos
+            <span className="sm:hidden">Datos</span>
+            <span className="hidden sm:inline">Calidad de datos</span>
           </Link>
-          <Link href="/panel" className={`${pill} shrink-0 text-white/80 hover:bg-white/10`}>
+          <Link href="/panel" className={`${pill} hidden text-white/80 hover:bg-white/10 sm:inline-flex`}>
             Panel
           </Link>
         </nav>

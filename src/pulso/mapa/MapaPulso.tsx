@@ -475,7 +475,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       )}
 
       {/* KPIs del aire, debajo de la barra del shell */}
-      <div className="absolute inset-x-3 top-[140px] z-10 md:inset-x-auto md:left-4 md:top-[76px] md:w-[360px]">
+      <div className="absolute inset-x-3 top-[72px] z-10 md:inset-x-auto md:left-4 md:top-[76px] md:w-[360px]">
         <KpisAire
           fase={aire.fase}
           resumen={resumen}

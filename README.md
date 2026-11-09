@@ -10,9 +10,16 @@ Proyecto de la **Hackathon de Datos ITM 2026** · Isabela Zuluaga y Juan Camilo 
 
 **El 92,6 % de los conjuntos de MEData con periodicidad declarada lleva más de 1,5 veces ese plazo sin actualizarse** (313 de 338, según la fecha de modificación que publica el propio catálogo, consultado el 8 de noviembre de 2026).
 
-## Mundo 3D (`/`)
+## PULSO · Medellín en vivo (`/`)
 
-La portada es un **mundo 3D** de La Alpujarra (three.js): se camina con WASD o con clic en el piso, se entra al edificio SINAPSIS y en la oficina cada agente atiende su despacho. Al acercarse a un despacho (tecla **E**) se abre su herramienta con datos reales de MEData. El menú "Despachos" permite hacer todo con el teclado, sin usar el 3D.
+La portada es un **mapa 3D de Medellín** (MapLibre + deck.gl sobre OpenFreeMap, sin claves): faros de SIATA con el PM2.5 en vivo, columnas de 250 m de incidentes, víctimas y hurto de MEData, y comunas oficiales. Encima flotan:
+
+- **Rutas inteligentes**: Google Routes calcula las alternativas y PULSO las compara por aire (SIATA) y siniestralidad histórica (MEData).
+- **PulsoBot**: el Analista con voz, disponible 24/7; responde citando la fuente y mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta).
+
+## La Alpujarra 3D (`/alpujarra`)
+
+La vista de calidad de los datos es un **mundo 3D** de La Alpujarra (three.js): se camina con WASD o con clic en el piso, se entra al edificio SINAPSIS y en la oficina cada agente atiende su despacho. Al acercarse a un despacho (tecla **E**) se abre su herramienta con datos reales de MEData. El menú "Despachos" permite hacer todo con el teclado, sin usar el 3D.
 
 - Diseño: handoff de Claude Design (`docs/diseno-mundo-3d.md`), portado a `src/mundo/`.
 - Panel ejecutivo sin 3D: `/panel`, `/frescura`, `/laboratorio`.
