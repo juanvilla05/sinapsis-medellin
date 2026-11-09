@@ -10,8 +10,15 @@ a una carpeta caché (por defecto `.cache-datos/`, ignorada por git) y calcula �
 agregados; ninguna fila individual sale de este script.
 
 Regla de supresión (umbral 5): en las rejillas, las celdas con n < 5 se eliminan; en todas las
-demás tablas, cualquier conteo entre 1 y 4 se escribe como null. El 0 nunca se escribe (las
-combinaciones sin casos simplemente no aparecen).
+demás tablas, cualquier conteo entre 1 y 4 se escribe como null. El 0 nunca se escribe en las
+tablas (las combinaciones sin casos simplemente no aparecen).
+
+Supresión complementaria (secundaria): un null aislado dentro de un grupo cuyo total se conoce
+(los sub-conteos de una celda suman su `n`; las filas de una comuna suman lo mismo en las dos tablas
+de incidentes; las modalidades de hurto de una comuna-año suman el total del consolidado 303) se
+recuperaría exacto por diferencia. Por eso, cuando en un grupo queda exactamente un null, se anula
+también el menor valor publicado > 0 del grupo (`supresion_complementaria`). En víctimas, heridos y
+muertos suman `n`: si uno queda en null se anula también el otro (celdas y tabla por comuna).
 
 Rejilla: celdas cuadradas en grados sobre WGS84, resolución fija RESOLUCION_GRADOS = 0.00225°
   i = floor(lat / 0.00225),  j = floor(lng / 0.00225)
@@ -173,6 +180,29 @@ def suprimir(n: int) -> int | None:
     return None if 0 < n < UMBRAL else n
 
 
+def supresion_complementaria(elementos: list, leer, anular) -> int:
+    """
+    Supresión secundaria dentro de un grupo cuyo total es conocido o derivable: si exactamente un
+    elemento quedó en null, su valor se recuperaría como total − Σ publicados, así que se anula también
+    el menor valor publicado > 0 del grupo (con dos nulls solo se conoce su suma, nunca cada uno).
+    `leer(e)` devuelve el conteo publicado del elemento (int o None) y `anular(e)` lo pone en null.
+    Devuelve cuántos elementos se anularon (0 o 1).
+    """
+    nulos = [e for e in elementos if leer(e) is None]
+    if len(nulos) != 1:
+        return 0
+    candidatos = [e for e in elementos if leer(e) is not None and leer(e) > 0]
+    if not candidatos:
+        return 0
+    anular(min(candidatos, key=leer))
+    return 1
+
+
+def complementar_subconteos(registro: dict, campos: tuple[str, ...]) -> int:
+    """Aplica `supresion_complementaria` a los sub-conteos `campos` de un dict que suman su total publicado."""
+    return supresion_complementaria(list(campos), lambda k: registro[k], lambda k: registro.__setitem__(k, None))
+
+
 def invertir(grupos: dict[str, list[str]]) -> dict[str, str]:
     return {v.casefold(): k for k, vs in grupos.items() for v in vs}
 
@@ -235,16 +265,27 @@ def rejilla_simple(contador: collections.Counter) -> tuple[list, dict]:
     return celdas, {"celdasTotales": len(contador), "celdasSuprimidas": len(contador) - len(celdas)}
 
 
-def tabla(contador: collections.Counter, claves: tuple[str, ...]) -> tuple[list, dict]:
-    """Filas {clave…, n} con n = null cuando 1 ≤ n < UMBRAL."""
+def tabla(contador: collections.Counter, claves: tuple[str, ...], grupo=None) -> tuple[list, dict]:
+    """
+    Filas {clave…, n} con n = null cuando 1 ≤ n < UMBRAL.
+    `grupo(fila)` define los grupos cuyo total es conocible desde otra tabla o fuente (p. ej. la comuna,
+    o la pareja comuna-año): en cada grupo con exactamente un null se anula además la fila publicada más
+    pequeña (supresión complementaria), y se cuenta en `secundarias` (incluidas en `filasSuprimidas`).
+    """
     filas = []
-    suprimidas = 0
     for k, n in sorted(contador.items(), key=lambda kv: kv[0]):
         fila = dict(zip(claves, k))
         fila["n"] = suprimir(n)
-        suprimidas += fila["n"] is None
         filas.append(fila)
-    return filas, {"filasTotales": len(filas), "filasSuprimidas": suprimidas}
+    secundarias = 0
+    if grupo is not None:
+        grupos: dict = collections.defaultdict(list)
+        for fila in filas:
+            grupos[grupo(fila)].append(fila)
+        for miembros in grupos.values():
+            secundarias += supresion_complementaria(miembros, lambda f: f["n"], lambda f: f.__setitem__("n", None))
+    suprimidas = sum(f["n"] is None for f in filas)
+    return filas, {"filasTotales": len(filas), "filasSuprimidas": suprimidas, "secundarias": secundarias}
 
 
 # ───────────────────────── incidentes ─────────────────────────
@@ -283,8 +324,11 @@ def procesar_incidentes(ruta: str, meta: dict, salida: str) -> dict:
 
     base = cabecera("incidentes", meta, filas, con_coord, fecha_max, (fecha_min, fecha_max))
     celdas, sup_rej = rejilla_simple(rejilla)
-    t1, sup1 = tabla(comuna_anio_grav, ("c", "a", "g"))
-    t2, sup2 = tabla(comuna_hora, ("c", "h"))
+    # Las dos tablas suman (casi) lo mismo por comuna, así que un null aislado en una se recupera restando
+    # la otra: supresión complementaria por comuna en ambas.
+    por_comuna = lambda f: f["c"]  # noqa: E731
+    t1, sup1 = tabla(comuna_anio_grav, ("c", "a", "g"), grupo=por_comuna)
+    t2, sup2 = tabla(comuna_hora, ("c", "h"), grupo=por_comuna)
 
     b1 = escribir_json(
         os.path.join(salida, "rejilla-incidentes.json"),
@@ -298,8 +342,9 @@ def procesar_incidentes(ruta: str, meta: dict, salida: str) -> dict:
                 "NUMCOMUNA normalizado a dos dígitos ('5', '5.0' → '05'); 'Sin Inf', 'AU', 'In', 'SN' y '0' excluidos",
                 f"filas sin comuna válida excluidas de las tablas por comuna: {sin_comuna}",
                 "hora tomada de FECHA_ACCIDENTE (hora local); gravedad 'Solo da\\xF1os' corregida a 'Solo daños'",
+                "supresión complementaria por comuna: si una comuna queda con un solo null en una tabla, se anula también su fila publicada más pequeña en esa tabla (supresion.*.secundarias), porque ambas tablas suman lo mismo por comuna",
             ],
-            "campos": {"c": "código de comuna", "a": "año", "g": "gravedad del incidente", "h": "hora local 0–23", "n": "incidentes (null = 1–4 suprimido)"},
+            "campos": {"c": "código de comuna", "a": "año", "g": "gravedad del incidente", "h": "hora local 0–23", "n": "incidentes (null = suprimido: 1–4 o complementario)"},
             "supresion": {"comunaAnioGravedad": sup1, "comunaHora": sup2},
             "comunaAnioGravedad": t1,
             "comunaHora": t2,
@@ -362,31 +407,32 @@ def procesar_victimas(ruta: str, meta: dict, salida: str) -> dict:
     base = cabecera("victimas", meta, filas, con_coord, fecha_max, (fecha_min, fecha_max))
     base["fuente"]["filasVaciasOmitidas"] = vacias
 
+    # Rejilla: las condiciones suman `n` y heridos + muertos = n. En cada grupo, si queda exactamente un
+    # sub-conteo en null se anula además el menor publicado > 0 (supresión complementaria); si no, el null
+    # se recuperaba por diferencia (p. ej. muertos = n − heridos).
+    campos_condicion = tuple(CONDICIONES)
     celdas = []
+    sec_rej = 0
     for (i, j), c in sorted(rejilla.items()):
         if c["n"] < UMBRAL:
             continue
-        celdas.append(
-            {
-                "i": i,
-                "j": j,
-                "n": c["n"],
-                "peaton": suprimir(c["peaton"]),
-                "motociclista": suprimir(c["motociclista"]),
-                "ciclista": suprimir(c["ciclista"]),
-                "otro": suprimir(c["otro"]),
-                "heridos": suprimir(c["heridos"]),
-                "muertos": suprimir(c["muertos"]),
-            }
-        )
-    sup_rej = {"celdasTotales": len(rejilla), "celdasSuprimidas": len(rejilla) - len(celdas)}
+        celda_pub = {"i": i, "j": j, "n": c["n"], **{k: suprimir(c[k]) for k in campos_condicion}, "heridos": suprimir(c["heridos"]), "muertos": suprimir(c["muertos"])}
+        sec_rej += complementar_subconteos(celda_pub, campos_condicion)
+        sec_rej += complementar_subconteos(celda_pub, ("heridos", "muertos"))
+        celdas.append(celda_pub)
+    sup_rej = {"celdasTotales": len(rejilla), "celdasSuprimidas": len(rejilla) - len(celdas), "secundarias": sec_rej}
 
+    # Tabla comuna×año×condición: heridos + muertos = n. Si `n` está publicado y exactamente uno de los dos
+    # queda en null, se anula también el otro (de lo contrario muertos = n − heridos, exacto).
     t1 = []
-    sup1 = 0
+    sup1 = sec1 = 0
     for (comuna, anio, cond), c in sorted(comuna_anio_cond.items()):
-        n = suprimir(c["n"])
-        sup1 += n is None
-        t1.append({"c": comuna, "a": anio, "cond": cond, "n": n, "heridos": suprimir(c["heridos"]), "muertos": suprimir(c["muertos"])})
+        fila = {"c": comuna, "a": anio, "cond": cond, "n": suprimir(c["n"]), "heridos": suprimir(c["heridos"]), "muertos": suprimir(c["muertos"])}
+        sup1 += fila["n"] is None
+        if fila["n"] is not None:
+            sec1 += complementar_subconteos(fila, ("heridos", "muertos"))
+        t1.append(fila)
+    sup_t1 = {"filasTotales": len(t1), "filasSuprimidas": sup1, "secundarias": sec1}
     t2, sup2 = tabla(muertos_anio, ("a",))
 
     b1 = escribir_json(
@@ -396,7 +442,10 @@ def procesar_victimas(ruta: str, meta: dict, salida: str) -> dict:
             "resolucion": bloque_rejilla(),
             "supresion": sup_rej,
             "condiciones": CONDICIONES,
-            "campos": {"n": "víctimas", "peaton|motociclista|ciclista|otro": "víctimas por condición (null = 1–4)", "heridos|muertos": "víctimas por gravedad (null = 1–4)"},
+            "notas": [
+                "supresión complementaria: si en una celda queda exactamente una condición en null se anula también la menor publicada > 0; si heridos o muertos queda en null se anula el otro (heridos + muertos = n). Contadas en supresion.secundarias",
+            ],
+            "campos": {"n": "víctimas", "peaton|motociclista|ciclista|otro": "víctimas por condición (null = suprimido: 1–4 o complementario)", "heridos|muertos": "víctimas por gravedad (null = suprimido: 1–4 o complementario)"},
             "celdas": celdas,
         },
     )
@@ -411,7 +460,7 @@ def procesar_victimas(ruta: str, meta: dict, salida: str) -> dict:
             ],
             "condiciones": CONDICIONES,
             "campos": {"c": "código de comuna", "a": "año", "cond": "condición agrupada", "n": "víctimas (null = 1–4)", "heridos|muertos": "por gravedad (null = 1–4)"},
-            "supresion": {"comunaAnioCondicion": {"filasTotales": len(t1), "filasSuprimidas": sup1}, "muertosPorAnio": sup2},
+            "supresion": {"comunaAnioCondicion": sup_t1, "muertosPorAnio": sup2},
             "comunaAnioCondicion": t1,
             "muertosPorAnio": t2,
         },
@@ -421,7 +470,7 @@ def procesar_victimas(ruta: str, meta: dict, salida: str) -> dict:
         "filasVacias": vacias,
         "conCoordenadas": con_coord,
         "rejilla": sup_rej,
-        "tablas": {"comunaAnioCondicion": {"filasTotales": len(t1), "filasSuprimidas": sup1}, "muertosPorAnio": sup2},
+        "tablas": {"comunaAnioCondicion": sup_t1, "muertosPorAnio": sup2},
         "bytes": b1 + b2,
         "fechaCorte": fecha_max,
     }
@@ -466,7 +515,9 @@ def procesar_hurto(ruta: str, meta: dict, salida: str) -> dict:
 
     base = cabecera("hurto", meta, filas, con_coord, fecha_max, (fecha_min, fecha_max))
     celdas, sup_rej = rejilla_simple(rejilla)
-    t1, sup1 = tabla(comuna_anio_mod, ("c", "a", "m"))
+    # El consolidado 303 (fixture del repo) publica el total de hurto a persona por comuna-año, así que un null
+    # aislado entre las modalidades se recuperaba por diferencia: supresión complementaria por (comuna, año).
+    t1, sup1 = tabla(comuna_anio_mod, ("c", "a", "m"), grupo=lambda f: (f["c"], f["a"]))
     t2, sup2 = tabla(dia_hora, ("d", "h"))
 
     b1 = escribir_json(
@@ -482,9 +533,10 @@ def procesar_hurto(ruta: str, meta: dict, salida: str) -> dict:
                 f"filas sin comuna válida excluidas de comunaAnioModalidad: {sin_comuna}",
                 "modalidades agrupadas según `modalidades`; las no listadas van a 'Otra'",
                 "diaSemanaHora: d = 0 lunes … 6 domingo (ISO), h = hora local 0–23 de fecha_hecho",
+                "supresión complementaria por comuna-año: si queda una sola modalidad en null se anula también la menor publicada > 0 (supresion.comunaAnioModalidad.secundarias), porque el consolidado 303 publica el total",
             ],
             "modalidades": MODALIDADES,
-            "campos": {"c": "código de comuna", "a": "año", "m": "modalidad agrupada", "d": "día de la semana", "h": "hora", "n": "hurtos (null = 1–4)"},
+            "campos": {"c": "código de comuna", "a": "año", "m": "modalidad agrupada", "d": "día de la semana", "h": "hora", "n": "hurtos (null = suprimido: 1–4 o complementario)"},
             "supresion": {"comunaAnioModalidad": sup1, "diaSemanaHora": sup2},
             "comunaAnioModalidad": t1,
             "diaSemanaHora": t2,
