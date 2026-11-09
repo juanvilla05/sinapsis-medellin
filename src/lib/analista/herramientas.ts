@@ -6,6 +6,14 @@ import catalogoJson from "@/data/catalogo.json";
 import resumenJson from "@/data/resumen-catalogo.json";
 import { MEDATA_BASE, MEDATA_CATALOGO, type ConjuntoAuditado, type EstadoFrescura, type ResumenCatalogo } from "@/lib/catalogo";
 import { analizarEnVivo } from "@/lib/laboratorio";
+import { resumirEstaciones, type EstacionResumen, type ResumenAire } from "@/lib/aire";
+import {
+  consultarHurtoComuna as consultarHurtoComunaMonitoreo,
+  consultarSeguridadVial as consultarSeguridadVialMonitoreo,
+  esquemaHurtoComuna as esquemaHurtoComunaMonitoreo,
+  esquemaSeguridadVial as esquemaSeguridadVialMonitoreo,
+} from "@/lib/monitoreo/consultas";
+import { obtenerAire } from "@/lib/siata";
 import { MUNICIPIOS_AMVA } from "@/lib/territorio";
 import { esFechaSoloDia, fechaColombia } from "@/mundo/areas";
 import { explicarFuentes, TEMAS_FAQ } from "./faq";
@@ -262,62 +270,75 @@ const esquemaAire = z.object({
   ambito: z.enum(["medellin", "area-metropolitana"]).optional().describe("Medellín (por defecto) o toda el área metropolitana"),
 });
 
-// TODO(merge juan/siata): reemplazar el stub por obtenerAire() de src/lib/siata.ts (cita SIATA, licencia "no declarada", nota si guardado).
-const consultarAire = definir<z.infer<typeof esquemaAire>, never>({
-  descripcion: "Calidad del aire (PM2.5) por estación de SIATA en Medellín o el área metropolitana: peor y mejor estación, promedio y categoría.",
+export interface DatosAire {
+  ambito: string;
+  resumen: ResumenAire;
+  /** estaciones válidas del ámbito, de mayor a menor PM2.5 (máx. 12) */
+  estaciones: EstacionResumen[];
+  lectura: string | null;
+  guardado: boolean;
+}
+
+const consultarAire = definir<z.infer<typeof esquemaAire>, DatosAire>({
+  descripcion: "Calidad del aire (PM2.5) por estación de SIATA en Medellín o el área metropolitana: peor y mejor estación, promedio y categoría ICA (Resolución 2254 de 2017).",
   esquema: esquemaAire,
-  async ejecutar() {
+  async ejecutar({ municipio, ambito }) {
+    const s = await obtenerAire();
+    if (!s.ok) return { ok: false, motivo: "error", detalle: `SIATA no respondió a las ${horaBogota()} y no hay copia guardada legible.` };
+    let lista = s.estaciones.filter((e) => e.pm25 !== null);
+    let nombreAmbito = "Medellín";
+    let res: ResumenAire = s.resumen.medellin;
+    if (municipio) {
+      lista = lista.filter((e) => e.municipio === municipio);
+      nombreAmbito = municipio;
+      res = resumirEstaciones(s.estaciones.filter((e) => e.municipio === municipio));
+    } else if (ambito === "area-metropolitana") {
+      nombreAmbito = "Valle de Aburrá";
+      res = s.resumen.areaMetropolitana;
+    } else {
+      lista = lista.filter((e) => e.enMedellin);
+    }
+    if (lista.length === 0) return { ok: false, motivo: "sin-datos", detalle: `SIATA no tiene lecturas válidas de PM2.5 en ${nombreAmbito} en este momento.` };
+    const estaciones = lista
+      .sort((a, b) => (b.pm25 ?? 0) - (a.pm25 ?? 0))
+      .slice(0, 12)
+      .map((e) => ({ codigo: e.codigo, nombre: e.nombre, sitio: e.sitio, municipio: e.municipio, pm25: e.pm25, ica: e.ica, categoria: e.categoria }));
     return {
-      ok: false,
-      motivo: "en-preparacion",
-      detalle: "La conexión con SIATA se está integrando en esta versión del Analista. Mientras tanto, la Sala de Monitoreo muestra la lectura de las estaciones.",
+      ok: true,
+      datos: { ambito: nombreAmbito, resumen: res, estaciones, lectura: s.lectura, guardado: s.guardado },
+      citas: [
+        {
+          conjunto: "SIATA · red de calidad del aire (PM2.5)",
+          campo: "PM2.5 µg/m³ por estación; ICA y categoría según Resolución 2254 de 2017",
+          url: s.fuente.url,
+          licencia: s.fuente.licencia,
+          fechaCorte: s.lectura ?? s.consultado,
+        },
+      ],
+      nota: [
+        s.lectura ? `${s.guardado ? "Copia guardada; lectura" : "Última lectura"} de SIATA: ${fechaCorteLegible(s.lectura)} (hora de Colombia).` : null,
+        s.guardado ? (s.aviso ?? `SIATA no respondió; se muestra la copia guardada${s.capturado ? ` del ${fechaCorteLegible(s.capturado)}` : ""}.`) : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || undefined,
     };
   },
 });
 
-/* ───────────── consultarSeguridadVial ───────────── */
+/* ───────────── consultarSeguridadVial y consultarHurtoComuna (Sala de Monitoreo) ───────────── */
 
-const esquemaSeguridadVial = z.object({
-  comuna: z.string().min(1).max(40).optional().describe("Nombre o código de la comuna"),
-  anio: z.number().int().min(2014).max(2026).optional(),
-  condicion: z.enum(["peaton", "motociclista", "ciclista", "todos"]).optional(),
-  hora: z.number().int().min(0).max(23).optional(),
-  tema: z.enum(["incidentes", "muertes-anio"]).optional().describe("'muertes-anio' compara MEData y Policía por año"),
-});
-
-// TODO(merge juan/monitoreo): leer src/data/seguridad-vial.json y obtenerMuertesPolicia() cuando lleguen a main.
-const consultarSeguridadVial = definir<z.infer<typeof esquemaSeguridadVial>, never>({
+const consultarSeguridadVial = definir<z.infer<typeof esquemaSeguridadVialMonitoreo>, unknown>({
   descripcion:
-    "Seguridad vial en Medellín: incidentes y víctimas por comuna, hora y condición (peatón, motociclista, ciclista) según MEData, y muertes por año según MEData y la Policía Nacional.",
-  esquema: esquemaSeguridadVial,
-  async ejecutar() {
-    return {
-      ok: false,
-      motivo: "en-preparacion",
-      detalle: "Los agregados de seguridad vial (por comuna, hora y año) se están integrando en esta versión del Analista. La Sala de Monitoreo los mostrará cuando estén listos.",
-    };
-  },
+    "Seguridad vial en Medellín según MEData: incidentes por comuna, año y hora pico (tema 'incidentes'); víctimas por comuna, año y condición peatón/motociclista/ciclista/otro (tema 'victimas' o con 'condicion'); y muertes por año MEData vs Policía Nacional (tema 'muertes-anio'). Solo agregados con supresión de conteos < 5.",
+  esquema: esquemaSeguridadVialMonitoreo,
+  ejecutar: (args) => consultarSeguridadVialMonitoreo(args),
 });
 
-/* ───────────── consultarHurtoComuna ───────────── */
-
-const esquemaHurto = z.object({
-  comuna: z.string().min(1).max(40).optional(),
-  anio: z.number().int().min(2003).max(2023).optional(),
-  conducta: z.string().min(2).max(60).optional().describe("P. ej. 'Hurto a persona', 'Hurto de motocicleta'"),
-});
-
-// TODO(merge juan/monitoreo): usar obtenerConsolidado() (1-027-23-000303, CC BY-SA 4.0) con supresión de conteos < 5.
-const consultarHurtoComuna = definir<z.infer<typeof esquemaHurto>, never>({
-  descripcion: "Casos de hurto por comuna y año en Medellín (consolidado del SISC publicado en MEData), solo agregados.",
-  esquema: esquemaHurto,
-  async ejecutar() {
-    return {
-      ok: false,
-      motivo: "en-preparacion",
-      detalle: "El consolidado de hurto por comuna se está integrando en esta versión del Analista. Solo se mostrarán agregados, nunca casos individuales.",
-    };
-  },
+const consultarHurtoComuna = definir<z.infer<typeof esquemaHurtoComunaMonitoreo>, unknown>({
+  descripcion:
+    "Hurtos por comuna y año en Medellín: consolidado oficial del SISC en MEData (conducta, por defecto 'Hurto a persona') o, con 'modalidad' (Atraco, Cosquilleo, Descuido, Raponazo…), el conjunto Hurto a persona. Solo agregados; nunca casos individuales.",
+  esquema: esquemaHurtoComunaMonitoreo,
+  ejecutar: (args) => consultarHurtoComunaMonitoreo(args),
 });
 
 /* ───────────── limpiarConjunto ───────────── */

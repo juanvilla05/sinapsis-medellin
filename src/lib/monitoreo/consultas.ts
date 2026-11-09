@@ -186,7 +186,7 @@ export async function consultarSeguridadVial(args: ArgsSeguridadVial = {}): Prom
     if (!t) return { ok: false, motivo: "en-preparacion", detalle: "El agregado de víctimas no pasó la validación." };
     const condicion = a.condicion && a.condicion !== "todos" ? (a.condicion as Condicion) : undefined;
     const filas = filtrarVictimas(t.comunaAnioCondicion, { anio: a.anio, condicion });
-    const r = sumarPorComuna(filas, (f) => comuna === null || f.c === comuna);
+    const r = sumarPorComuna(filas, () => true /* ranking de toda la ciudad; la comuna pedida se marca en armarRanking */);
     if (r.porComuna.length === 0) return { ok: false, motivo: "sin-datos", detalle: "Sin filas publicadas para ese filtro (año, condición o comuna)." };
     const descripcion = `Víctimas en incidentes viales${condicion ? ` · ${condicion}` : ""}${a.anio ? ` · ${a.anio}` : " · todos los años"}`;
     const periodo = `${t.fuente.periodo.desde ?? "?"} → ${t.fuente.periodo.hasta ?? "?"}`;
@@ -200,7 +200,7 @@ export async function consultarSeguridadVial(args: ArgsSeguridadVial = {}): Prom
 
   const t = cargarIncidentesComuna();
   if (!t) return { ok: false, motivo: "en-preparacion", detalle: "El agregado de incidentes no pasó la validación." };
-  const r = sumarPorComuna(filtrarIncidentes(t.comunaAnioGravedad, { anio: a.anio }), (f) => comuna === null || f.c === comuna);
+  const r = sumarPorComuna(filtrarIncidentes(t.comunaAnioGravedad, { anio: a.anio }), () => true /* ranking de toda la ciudad; la comuna pedida se marca en armarRanking */);
   if (r.porComuna.length === 0) return { ok: false, motivo: "sin-datos", detalle: "Sin filas publicadas para ese filtro (año o comuna)." };
   const horas = serieHoras(t.comunaHora, comuna ?? undefined);
   let horaPico: SeguridadVialConsulta["horaPico"] = null;
@@ -253,7 +253,7 @@ export async function consultarHurtoComuna(args: ArgsHurtoComuna = {}): Promise<
     const modalidades = [...new Set(t.comunaAnioModalidad.map((f) => f.m))].sort((x, y) => x.localeCompare(y));
     const modalidad = modalidades.find((m) => m.localeCompare(a.modalidad!, "es", { sensitivity: "base" }) === 0);
     if (!modalidad) return { ok: false, motivo: "sin-datos", detalle: `Modalidad no reconocida. Disponibles: ${modalidades.join(", ")}.` };
-    const r = sumarPorComuna(filtrarHurto(t.comunaAnioModalidad, { anio: a.anio, modalidad }), (f) => comuna === null || f.c === comuna);
+    const r = sumarPorComuna(filtrarHurto(t.comunaAnioModalidad, { anio: a.anio, modalidad }), () => true /* ranking de toda la ciudad; la comuna pedida se marca en armarRanking */);
     if (r.porComuna.length === 0) return { ok: false, motivo: "sin-datos", detalle: "Sin filas publicadas para ese filtro." };
     const descripcion = `Hurto a persona · ${modalidad}${a.anio ? ` · ${a.anio}` : " · todos los años"}`;
     const periodo = `${t.fuente.periodo.desde ?? "?"} → ${t.fuente.periodo.hasta ?? "?"}`;
@@ -272,7 +272,7 @@ export async function consultarHurtoComuna(args: ArgsHurtoComuna = {}): Promise<
   const filas = s.datos.filas
     .filter((f) => f.conducta === conducta && (a.anio === undefined || f.anio === a.anio))
     .map((f) => ({ c: f.comuna, n: f.casos }));
-  const r = sumarPorComuna(filas, (f) => comuna === null || f.c === comuna);
+  const r = sumarPorComuna(filas, () => true /* ranking de toda la ciudad; la comuna pedida se marca en armarRanking */);
   if (r.porComuna.length === 0) return { ok: false, motivo: "sin-datos", detalle: "Sin filas para ese filtro (año o comuna)." };
   const anios = s.datos.anios;
   const descripcion = `${conducta}${a.anio ? ` · ${a.anio}` : " · todos los años"}`;

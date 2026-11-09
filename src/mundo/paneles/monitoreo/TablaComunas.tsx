@@ -4,7 +4,7 @@ import { COMUNAS_MEDELLIN } from "@/lib/territorio";
 import type { ResumenComunas } from "@/lib/monitoreo/metricas";
 import { decimal } from "../../areas";
 import { textoValor } from "./capas";
-import { colorComuna, tintaSobre } from "./escala";
+import { colorComuna, fraccionComuna, tintaSobre } from "./escala";
 
 /**
  * Vista base de la pestaña Comunas: tabla ordenada de mayor a menor con barras proporcionales al máximo.
@@ -58,7 +58,7 @@ export default function TablaComunas({
                       <div className="flex min-w-0 items-center gap-2">
                         <span
                           className="inline-flex h-6 w-7 flex-none items-center justify-center rounded-md font-mono text-[11px] font-semibold"
-                          style={{ background: colorComuna(valor, resumen.maximo), color: tintaSobre(fraccion) }}
+                          style={{ background: colorComuna(valor, resumen.maximo), color: tintaSobre(fraccionComuna(valor, resumen.maximo)) }}
                         >
                           {c.codigo}
                         </span>

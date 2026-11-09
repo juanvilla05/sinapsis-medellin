@@ -1,5 +1,7 @@
 import type { RespuestaFaq } from "@/lib/analista/faq";
-import type { Cita, DatosBusqueda, DatosFrescura, DatosLimpieza, Respuesta as RespuestaHerramienta } from "@/lib/analista/herramientas";
+import type { Cita, DatosAire, DatosBusqueda, DatosFrescura, DatosLimpieza, Respuesta as RespuestaHerramienta } from "@/lib/analista/herramientas";
+import { CATEGORIAS } from "@/lib/ica";
+import type { HurtoComunaConsulta, MuertesPorAnioConsulta, RankingComunas, SeguridadVialConsulta } from "@/lib/monitoreo/consultas";
 import { NOMBRES_HERRAMIENTAS, type NombreHerramienta } from "@/lib/analista/sugeridas";
 import type { EstadoFrescura } from "@/lib/catalogo";
 import { decimal, esFechaSoloDia, fechaColombia, miles } from "../../areas";
@@ -198,6 +200,158 @@ function CuerpoFaq({ d }: { d: RespuestaFaq }) {
   );
 }
 
+function ChipIca({ clave }: { clave: keyof typeof CATEGORIAS }) {
+  const c = CATEGORIAS[clave];
+  return (
+    <span className="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: c.fondo, color: c.tinta }}>
+      {c.corto}
+    </span>
+  );
+}
+
+function CuerpoAire({ d }: { d: DatosAire }) {
+  const peor = d.resumen.peor;
+  const max = Math.max(1, ...d.estaciones.map((e) => e.pm25 ?? 0));
+  return (
+    <div className="flex flex-col gap-3.5">
+      {peor && peor.pm25 !== null ? (
+        <CifraGrande
+          valor={`${decimal(peor.pm25)} µg/m³`}
+          texto={`es la concentración de PM2.5 más alta en ${d.ambito}: estación #${peor.codigo} · ${peor.sitio || peor.nombre} (ICA ${peor.ica ?? "—"}, ${CATEGORIAS[peor.categoria].texto.toLowerCase()}). Promedio de ${miles(d.resumen.estacionesValidas)} estaciones válidas: ${d.resumen.promedioPm25 !== null ? `${decimal(d.resumen.promedioPm25)} µg/m³` : "sin dato"}.`}
+        />
+      ) : (
+        <span className="text-[14px] text-[#0F172A]">Sin lecturas válidas de PM2.5 en {d.ambito}.</span>
+      )}
+      <div className="flex flex-col gap-1.5">
+        {d.estaciones.map((e) => (
+          <div key={e.codigo} className="grid grid-cols-[minmax(0,1fr)_minmax(0,90px)_auto] items-center gap-2.5 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)_auto]">
+            <span className="truncate text-[13px] text-[#0F172A]" title={`${e.nombre} · ${e.municipio}`}>
+              #{e.codigo} · {e.sitio || e.nombre}
+            </span>
+            <div className="h-2.5 overflow-hidden rounded bg-[#F4F7FB]">
+              <div className="h-full rounded" style={{ width: `${((e.pm25 ?? 0) / max) * 100}%`, background: CATEGORIAS[e.categoria].color }} />
+            </div>
+            <span className="flex items-center gap-1.5 text-right font-mono text-[12.5px] text-[#0F172A]">
+              {e.pm25 !== null ? decimal(e.pm25) : "—"} <ChipIca clave={e.categoria} />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BarrasComunas({ r }: { r: RankingComunas }) {
+  const filas = r.comunas.filter((c) => c.valor !== null).slice(0, 8);
+  const max = Math.max(1, ...filas.map((c) => c.valor ?? 0));
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[12px] text-[#475569]">
+        {r.descripcion} · período {r.periodo} · las {miles(filas.length)} con más casos reportados
+      </span>
+      {filas.map((c) => (
+        <div key={c.codigo} className="grid grid-cols-[minmax(0,1fr)_minmax(0,90px)_auto] items-center gap-2.5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto]">
+          <span className={`truncate text-[13px] ${r.comuna?.codigo === c.codigo ? "font-bold text-[#1E3A5F]" : "text-[#0F172A]"}`}>
+            {c.codigo} · {c.nombre}
+          </span>
+          <div className="h-2.5 overflow-hidden rounded bg-[#F4F7FB]">
+            <div className="h-full rounded bg-[#2563EB]" style={{ width: `${((c.valor ?? 0) / max) * 100}%` }} />
+          </div>
+          <span className="text-right font-mono text-[12.5px] text-[#0F172A]">
+            {miles(c.valor ?? 0)}
+            {c.incompleto ? "†" : ""}
+            {c.porcentaje !== null ? <span className="text-[#475569]"> · {decimal(c.porcentaje)} %</span> : null}
+          </span>
+        </div>
+      ))}
+      {filas.some((c) => c.incompleto) && <span className="text-[11.5px] text-[#475569]">† incluye conteos suprimidos (1–4): el valor real es algo mayor.</span>}
+    </div>
+  );
+}
+
+function CifraRanking({ r }: { r: RankingComunas }) {
+  const c = r.comuna ?? r.comunas.find((x) => x.valor !== null) ?? null;
+  if (!c || c.valor === null) return <span className="text-[14px] text-[#0F172A]">Sin casos publicados para ese filtro.</span>;
+  const texto = r.comuna
+    ? `${r.descripcion.toLowerCase()} en ${c.nombre}: ${c.porcentaje !== null ? `${decimal(c.porcentaje)} % del total de la ciudad` : ""}, ${c.frenteAlPromedio}.`
+    : `${r.descripcion.toLowerCase()} en ${c.nombre}, la comuna con más casos reportados (${c.porcentaje !== null ? `${decimal(c.porcentaje)} %` : "—"} de ${miles(r.total)} en la ciudad).`;
+  return <CifraGrande valor={`${miles(c.valor)}${c.incompleto ? "†" : ""}`} texto={texto} />;
+}
+
+function CuerpoSeguridad({ d }: { d: SeguridadVialConsulta | MuertesPorAnioConsulta }) {
+  if ("filas" in d) {
+    const ult = d.filas[d.filas.length - 1];
+    return (
+      <div className="flex flex-col gap-3">
+        {d.filas.length === 1 && ult && (ult.medata !== null || ult.policia !== null) ? (
+          ult.medata !== null && ult.policia !== null ? (
+            <CifraGrande
+              valor={`${miles(ult.medata)} vs ${miles(ult.policia)}`}
+              texto={`muertes en incidentes viales en Medellín en ${ult.anio}: MEData (Movilidad) frente a la Policía Nacional. Diferencia: ${miles(Math.abs(ult.policia - ult.medata))}.`}
+            />
+          ) : (
+            <CifraGrande
+              valor={miles((ult.policia ?? ult.medata)!)}
+              texto={
+                ult.policia !== null
+                  ? `muertes en incidentes viales en Medellín en ${ult.anio} según la Policía Nacional. MEData no publica ese año${d.ultimoAnioMedata !== null ? ` (su serie termina en ${d.ultimoAnioMedata})` : ""}.`
+                  : `muertes en incidentes viales en Medellín en ${ult.anio} según MEData. La Policía Nacional no tiene dato para ese año.`
+              }
+            />
+          )
+        ) : null}
+        <p className="m-0 text-[13.5px] leading-relaxed text-[#0F172A]">{d.texto}</p>
+        <div className="overflow-x-auto rounded-xl border border-[#E3EAF3]">
+          <table className="w-full min-w-[320px] border-collapse text-left text-[12.5px]">
+            <thead className="bg-[#F4F7FB] text-[11px] font-bold tracking-wide text-[#475569]">
+              <tr>
+                <th className="px-3 py-2">AÑO</th>
+                <th className="px-3 py-2 text-right">MEDATA</th>
+                <th className="px-3 py-2 text-right">POLICÍA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.filas.map((f) => (
+                <tr key={f.anio} className="border-t border-[#E3EAF3]">
+                  <td className="px-3 py-1.5 font-mono">{f.anio}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{f.medata !== null ? miles(f.medata) : <span className="text-[#64748B]">sin publicar</span>}</td>
+                  <td className="px-3 py-1.5 text-right font-mono">{f.policia !== null ? miles(f.policia) : <span className="text-[#64748B]">—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3.5">
+      <CifraRanking r={d.ranking} />
+      {d.horaPico && (
+        <span className="text-[13px] text-[#0F172A]">
+          Hora con más incidentes en todo el período: <b className="font-mono">{String(d.horaPico.hora).padStart(2, "0")}:00</b> ({miles(d.horaPico.valor)} registros).
+        </span>
+      )}
+      {d.enHora && (
+        <span className="text-[13px] text-[#0F172A]">
+          A las {String(d.enHora.hora).padStart(2, "0")}:00: {d.enHora.valor !== null ? miles(d.enHora.valor) : "suprimido (<5)"}
+          {d.enHora.incompleto ? "†" : ""} registros.
+        </span>
+      )}
+      <BarrasComunas r={d.ranking} />
+    </div>
+  );
+}
+
+function CuerpoHurto({ d }: { d: HurtoComunaConsulta }) {
+  return (
+    <div className="flex flex-col gap-3.5">
+      <CifraRanking r={d.ranking} />
+      <BarrasComunas r={d.ranking} />
+    </div>
+  );
+}
+
 function CuerpoGenerico({ datos }: { datos: unknown }) {
   return (
     <pre className="overflow-x-auto rounded-xl border border-[#E3EAF3] bg-[#F4F7FB] p-3 font-mono text-[11.5px] text-[#0F172A]">
@@ -247,6 +401,15 @@ export default function Respuesta({
       break;
     case "explicarFuentes":
       cuerpo = <CuerpoFaq d={d as RespuestaFaq} />;
+      break;
+    case "consultarAire":
+      cuerpo = <CuerpoAire d={d as DatosAire} />;
+      break;
+    case "consultarSeguridadVial":
+      cuerpo = <CuerpoSeguridad d={d as SeguridadVialConsulta | MuertesPorAnioConsulta} />;
+      break;
+    case "consultarHurtoComuna":
+      cuerpo = <CuerpoHurto d={d as HurtoComunaConsulta} />;
       break;
     default:
       cuerpo = <CuerpoGenerico datos={d} />;

@@ -48,6 +48,22 @@ export default function Encabezado() {
           <MarcaOficial src={ARCHIVOS_MARCA.logoAlcaldia} alt="Alcaldía de Medellín" etiqueta="Logo Alcaldía" />
         </div>
       </div>
+      {/* móvil y tablet: la misma navegación en una fila desplazable (la de arriba solo aparece desde lg) */}
+      <nav className="lg:hidden" aria-label="Despachos (móvil)">
+        <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none]">
+          <Link href="/" className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-white">
+            Mundo 3D
+          </Link>
+          <Link href="/panel" className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">
+            Panel
+          </Link>
+          {DESPACHOS.filter((d) => d.listo).map((d) => (
+            <Link key={d.id} href={d.ruta} className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">
+              {d.corto}
+            </Link>
+          ))}
+        </div>
+      </nav>
     </header>
   );
 }

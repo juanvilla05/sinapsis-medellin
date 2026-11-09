@@ -188,7 +188,7 @@ export async function montarComunas3D(op: Opciones3D): Promise<Api3D> {
   sol.position.set(-40, 90, 60);
   escena.add(sol);
 
-  const radioVista = Math.max(proyeccion.ancho, proyeccion.alto) * 0.5;
+  const radioVista = Math.max(proyeccion.ancho, proyeccion.alto) * 0.4; // encuadre ajustado: la ciudad llena el lienzo
   const camara = new three.OrthographicCamera(-radioVista, radioVista, radioVista, -radioVista, 0.1, 2000);
   const azimut0 = Math.PI / 4;
   const elevacion0 = 35.264 * GRADOS;
