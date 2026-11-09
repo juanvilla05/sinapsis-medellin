@@ -10,7 +10,8 @@ export type NombreHerramienta =
   | "consultarSeguridadVial"
   | "consultarHurtoComuna"
   | "limpiarConjunto"
-  | "explicarFuentes";
+  | "explicarFuentes"
+  | "planearRuta";
 
 export interface Sugerida {
   texto: string;
@@ -33,6 +34,11 @@ export const SUGERIDAS: Sugerida[] = [
     args: { tema: "muertes-anio", anio: 2023 },
   },
   { texto: "¿De dónde salen los datos de SINAPSIS?", herramienta: "explicarFuentes", args: { tema: "fuentes" } },
+  {
+    texto: "¿Cuál es la ruta con mejor aire de La Alpujarra al Parque Lleras?",
+    herramienta: "planearRuta",
+    args: { origen: "La Alpujarra, Medellín", destino: "Parque Lleras, Medellín" },
+  },
 ];
 
 /** Nombre legible del despacho/fuente que consulta cada herramienta (para la UI). */
@@ -44,6 +50,7 @@ export const NOMBRES_HERRAMIENTAS: Record<NombreHerramienta, string> = {
   consultarHurtoComuna: "Hurto a persona por comuna (MEData)",
   limpiarConjunto: "Laboratorio de Limpieza",
   explicarFuentes: "Fuentes y método",
+  planearRuta: "Rutas inteligentes (Google Routes · SIATA · MEData)",
 };
 
 export const NOMBRES_HERRAMIENTAS_LISTA = Object.keys(NOMBRES_HERRAMIENTAS) as NombreHerramienta[];

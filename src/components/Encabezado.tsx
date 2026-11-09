@@ -29,7 +29,10 @@ export default function Encabezado() {
         </Link>
         <nav className="ml-6 hidden items-center gap-1 lg:flex" aria-label="Despachos">
           <Link href="/" className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-white/20">
-            Mundo 3D
+            En vivo
+          </Link>
+          <Link href="/alpujarra" className="rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white">
+            La Alpujarra
           </Link>
           <Link href="/panel" className="rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white">
             Panel
@@ -52,7 +55,10 @@ export default function Encabezado() {
       <nav className="lg:hidden" aria-label="Despachos (móvil)">
         <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none]">
           <Link href="/" className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-white">
-            Mundo 3D
+            En vivo
+          </Link>
+          <Link href="/alpujarra" className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">
+            La Alpujarra
           </Link>
           <Link href="/panel" className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">
             Panel
