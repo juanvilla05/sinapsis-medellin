@@ -3,7 +3,7 @@
  * Todo se deriva de DatosMundo (cifras reales del catálogo) y del contexto de la sesión;
  * ninguna cifra se escribe a mano.
  */
-import { decimal, miles } from "./areas";
+import { decimal, fechaHoraCorta, horaColombia, miles } from "./areas";
 import type { DatosMundo } from "./datos";
 
 export type EstadoAgente = "trabajando" | "esperando" | "te-necesita" | "sin-senal";
@@ -14,8 +14,20 @@ export interface ContextoAgentes extends DatosMundo {
   rescatadas?: number;
   /** preguntas respondidas por el Analista durante la sesión */
   preguntas?: number;
-  /** estaciones SIATA válidas en Medellín; `undefined` = consultando, `null` = sin señal */
-  estaciones?: number | null;
+  /** lectura de aire de SIATA (de /api/siata); `undefined` = consultando, `null` = sin señal ni copia */
+  aire?: AireAgente | null;
+}
+
+/** Lo que la Operadora sabe de SIATA: cuántas estaciones de Medellín reportan y qué tan fresco es el dato. */
+export interface AireAgente {
+  /** estaciones válidas en Medellín */
+  validas: number;
+  /** `true` si SIATA no respondió y el snapshot es la copia guardada (fixture) */
+  guardado: boolean;
+  /** ISO de la lectura más reciente entre las estaciones; `null` si ninguna trae fecha */
+  lectura: string | null;
+  /** ISO de la captura de la copia guardada; `null` si el dato es de la revalidación */
+  capturado: string | null;
 }
 
 export type IdAgente = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo" | "guia";
@@ -35,11 +47,20 @@ export interface EstadoVisibleAgente {
   frase: string;
 }
 
+/** Puntos de estado en el menú y el HUD (misma paleta que los estados de datos). */
 export const COLOR_AGENTE: Record<EstadoAgente, string> = {
   trabajando: "#16A34A",
   esperando: "#64748B",
   "te-necesita": "#DC2626",
   "sin-senal": "#D97706",
+};
+
+/** Fondo de los globos de notificación: texto blanco de 10,5 px exige ≥ 4,5:1 (WCAG AA); todos cumplen. */
+export const COLOR_GLOBO: Record<EstadoAgente, string> = {
+  trabajando: "#15803D",
+  esperando: "#475569",
+  "te-necesita": "#B91C1C",
+  "sin-senal": "#B45309",
 };
 
 export const TEXTO_ESTADO_AGENTE: Record<EstadoAgente, string> = {
@@ -99,13 +120,21 @@ export const AGENTES: Record<IdAgente, Agente> = {
   monitoreo: {
     nombre: "Operadora",
     rol: "Sala de Monitoreo",
+    // Nunca dice «en vivo» ni «ahora mismo»: el snapshot es ISR (5 min) o la copia guardada; siempre se dice cuándo.
     frase: (d) => {
-      if (d.estaciones === undefined) return `Consultando las estaciones de SIATA…`;
-      if (d.estaciones === null) return `Sin señal de SIATA en este momento. Muestro la seguridad vial y para moverse por cada comuna con los datos guardados.`;
-      return `${miles(d.estaciones)} ${plural(d.estaciones, "estación válida", "estaciones válidas")} de SIATA en Medellín ahora mismo. Muestro la ciudad en vivo.`;
+      if (d.aire === undefined) return `Consultando las estaciones de SIATA…`;
+      if (d.aire === null) return `Sin señal de SIATA en este momento. Muestro la seguridad vial y para moverse por cada comuna con los datos guardados.`;
+      const { validas, guardado, lectura, capturado } = d.aire;
+      const cuantas = `${miles(validas)} ${plural(validas, "estación válida", "estaciones válidas")} de SIATA en Medellín`;
+      if (guardado) {
+        const captura = capturado ?? lectura;
+        return `${cuantas} · copia guardada${captura ? ` del ${fechaHoraCorta(captura)}` : ""}. SIATA no respondió; muestro la última copia.`;
+      }
+      return `${cuantas} · última lectura${lectura ? ` ${horaColombia(lectura)}` : " sin hora"}.`;
     },
-    cifra: (d) => (d.estaciones === undefined ? "…" : d.estaciones === null ? "—" : miles(d.estaciones)),
-    estado: (d) => (d.estaciones === undefined ? "esperando" : d.estaciones === null ? "sin-senal" : "trabajando"),
+    cifra: (d) => (d.aire === undefined ? "…" : d.aire === null ? "—" : miles(d.aire.validas)),
+    // copia guardada = ámbar («sin señal»): el dato existe, pero SIATA no está respondiendo
+    estado: (d) => (d.aire === undefined ? "esperando" : d.aire === null || d.aire.guardado ? "sin-senal" : "trabajando"),
   },
   guia: {
     nombre: "Guía",

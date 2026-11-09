@@ -9,7 +9,7 @@ import PanelEnConstruccion from "./paneles/PanelEnConstruccion";
 import PanelMonitoreo from "./paneles/PanelMonitoreo";
 import PanelAnalista from "./paneles/PanelAnalista";
 import { colorEstado, type DatosMundo } from "./datos";
-import { evaluarAgente, evaluarAgentes, type ContextoAgentes, type EstadoVisibleAgente, type IdAgente } from "./agentes";
+import { evaluarAgente, evaluarAgentes, type AireAgente, type ContextoAgentes, type EstadoVisibleAgente, type IdAgente } from "./agentes";
 
 interface MundoAPI {
   enter(): void;
@@ -25,13 +25,25 @@ interface MundoAPI {
   dispose(): void;
 }
 
-/** Lee del JSON de /api/siata cuántas estaciones válidas hay en Medellín; `null` si no hay señal o la ruta no existe. */
-function estacionesValidasDe(j: unknown): number | null {
+const isoValido = (v: unknown) => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
+
+/**
+ * Lee del JSON de /api/siata lo que la Operadora necesita: estaciones válidas en Medellín y la frescura del dato
+ * (`guardado`, `lectura`, `capturado`), para no decir «en vivo» cuando es la copia guardada. `null` = sin señal.
+ */
+function aireDe(j: unknown): AireAgente | null {
   if (!j || typeof j !== "object") return null;
-  const r = j as { ok?: boolean; resumen?: { medellin?: { estacionesValidas?: unknown } } };
+  const r = j as {
+    ok?: boolean;
+    guardado?: unknown;
+    lectura?: unknown;
+    capturado?: unknown;
+    resumen?: { medellin?: { estacionesValidas?: unknown } };
+  };
   if (r.ok === false) return null;
   const n = r.resumen?.medellin?.estacionesValidas;
-  return typeof n === "number" && Number.isFinite(n) ? n : null;
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  return { validas: n, guardado: r.guardado === true, lectura: isoValido(r.lectura), capturado: isoValido(r.capturado) };
 }
 
 const tarjeta = "rounded-2xl border border-[#E3EAF3] bg-white/95 shadow-[0_8px_24px_rgba(30,58,95,.1)]";
@@ -79,7 +91,7 @@ export default function ExperienciaMundo({
   // contexto de los agentes: lo que pasa en esta sesión (sin cifras a mano)
   const [preguntas, setPreguntas] = useState(0);
   const preguntasRef = useRef(0);
-  const [estaciones, setEstaciones] = useState<number | null | undefined>(undefined);
+  const [aire, setAire] = useState<AireAgente | null | undefined>(undefined);
   const [secretariaElegida, setSecretariaElegida] = useState<string | null>(null);
   const temporizador = useRef<number | null>(null);
 
@@ -101,7 +113,7 @@ export default function ExperienciaMundo({
     [abrir],
   );
 
-  const ctx = useMemo<ContextoAgentes>(() => ({ ...datos, rescatadas, preguntas, estaciones }), [datos, rescatadas, preguntas, estaciones]);
+  const ctx = useMemo<ContextoAgentes>(() => ({ ...datos, rescatadas, preguntas, aire }), [datos, rescatadas, preguntas, aire]);
   const agentes = useMemo(() => evaluarAgentes(ctx), [ctx]);
   const trabajando = Object.values(agentes).filter((a) => a.estado === "trabajando").length;
   const teNecesitan = Object.values(agentes).filter((a) => a.estado === "te-necesita").length;
@@ -149,35 +161,31 @@ export default function ExperienciaMundo({
     if (listo) mundo.current?.setDatos(ctx);
   }, [listo, ctx]);
 
-  // Operadora de la Sala de Monitoreo: estaciones SIATA válidas en Medellín desde /api/siata.
-  // Si la ruta no existe o no responde, queda "sin señal" sin lanzar error.
+  // Operadora de la Sala de Monitoreo: estaciones SIATA válidas en Medellín y frescura del dato desde /api/siata.
+  // Si la ruta no existe o no responde, queda "sin señal" sin lanzar error; si llega la copia guardada, lo dice.
   useEffect(() => {
     const ctrl = new AbortController();
     (async () => {
-      let n: number | null = null;
+      let a: AireAgente | null = null;
       try {
         const r = await fetch("/api/siata", { cache: "no-store", signal: ctrl.signal });
-        if (r.ok && (r.headers.get("content-type") ?? "").includes("json")) n = estacionesValidasDe(await r.json());
+        if (r.ok && (r.headers.get("content-type") ?? "").includes("json")) a = aireDe(await r.json());
       } catch {
-        n = null;
+        a = null;
       }
       if (ctrl.signal.aborted) return;
-      setEstaciones(n);
-      mundo.current?.setAgente("monitoreo", evaluarAgente("monitoreo", { ...datosRef.current, estaciones: n }));
+      setAire(a);
+      mundo.current?.setAgente("monitoreo", evaluarAgente("monitoreo", { ...datosRef.current, aire: a }));
     })();
     return () => ctrl.abort();
   }, []);
 
-  // Analista: cada respuesta del panel dispara `sinapsis:pregunta` en window (contrato con PanelAnalista)
-  useEffect(() => {
-    const onPregunta = () => {
-      const n = preguntasRef.current + 1;
-      preguntasRef.current = n;
-      setPreguntas(n);
-      mundo.current?.setAgente("analista", evaluarAgente("analista", { ...datosRef.current, preguntas: n }));
-    };
-    addEventListener("sinapsis:pregunta", onPregunta);
-    return () => removeEventListener("sinapsis:pregunta", onPregunta);
+  // Analista: PanelAnalista llama `onRespuesta` por cada respuesta terminada (chat o modo directo); contrato tipado por prop.
+  const onPregunta = useCallback(() => {
+    const n = preguntasRef.current + 1;
+    preguntasRef.current = n;
+    setPreguntas(n);
+    mundo.current?.setAgente("analista", evaluarAgente("analista", { ...datosRef.current, preguntas: n }));
   }, []);
 
   // Esc cierra el panel; el foco va al botón de volver al abrirlo
@@ -454,7 +462,7 @@ export default function ExperienciaMundo({
               />
             )}
             {areaPanel.id === "monitoreo" && <PanelMonitoreo datos={datos} modo="modal" />}
-            {areaPanel.id === "analista" && <PanelAnalista modo="modal" />}
+            {areaPanel.id === "analista" && <PanelAnalista modo="modal" onRespuesta={onPregunta} />}
             {areaPanel.id === "ventanilla" && <PanelEnConstruccion area={areaPanel} />}
           </div>
         </div>

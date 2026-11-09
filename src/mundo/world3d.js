@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 // ★ datos reales en el mundo: edificios de secretarías, videowall y agentes (cifras derivadas, nunca a mano)
 import { crearSecretarias, dibujarVideowall } from './secretarias.js';
-import { COLOR_AGENTE, TEXTO_ESTADO_AGENTE, evaluarAgentes } from './agentes';
+import { COLOR_GLOBO, TEXTO_ESTADO_AGENTE, evaluarAgentes } from './agentes';
 
 let FONT_SANS = "'Plus Jakarta Sans', sans-serif";
 let FONT_MONO = "'JetBrains Mono', monospace";
@@ -420,14 +420,15 @@ export function createWorld(el, cb = {}) {
   // ★ secretarías: edificios de datos alrededor de la plaza (ver secretarias.js); respetan los obstáculos del mundo
   const secretarias = crearSecretarias(scene, datosActuales ? datosActuales.secretarias : [], { plastic, addAABB, obstaculos: obstacles, mkLabel, labels, pill });
   // ★ globos de notificación sobre cada agente (cifra real + color por estado) y frases dinámicas del diálogo
+  // COLOR_GLOBO (no COLOR_AGENTE): fondos ≥ 4,5:1 con texto blanco de 10,5 px para que la cifra se lea en el proyector
   const frases = {}, globos = {};
-  const estiloGlobo = { background: COLOR_AGENTE.esperando, color: '#fff', fontFamily: FONT_MONO, fontSize: '10.5px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', border: '2px solid #fff', boxShadow: '0 4px 10px rgba(30,58,95,.22)', minWidth: '22px', textAlign: 'center', lineHeight: '16px', display: 'none' };
+  const estiloGlobo = { background: COLOR_GLOBO.esperando, color: '#fff', fontFamily: FONT_MONO, fontSize: '10.5px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', border: '2px solid #fff', boxShadow: '0 4px 10px rgba(30,58,95,.22)', minWidth: '22px', textAlign: 'center', lineHeight: '16px', display: 'none' };
   Object.keys(agents).forEach(id => { globos[id] = mkLabel('', estiloGlobo); });
   const aplicarAgente = (id, info = {}) => {
     if (info.frase != null) frases[id] = info.frase;
     const g = globos[id]; if (!g) return;
     if (info.cifra != null) g.textContent = info.cifra;
-    if (info.estado) { g.style.background = COLOR_AGENTE[info.estado] || COLOR_AGENTE.esperando; g.title = TEXTO_ESTADO_AGENTE[info.estado] || ''; g.dataset.estado = info.estado; }
+    if (info.estado) { g.style.background = COLOR_GLOBO[info.estado] || COLOR_GLOBO.esperando; g.title = TEXTO_ESTADO_AGENTE[info.estado] || ''; g.dataset.estado = info.estado; }
   };
   const aplicarDatos = (d) => {
     if (!d) return; datosActuales = d;
