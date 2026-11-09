@@ -172,9 +172,11 @@ export default function PestanaComunas({ datos }: { datos: DatosMundo }) {
   }, [t, filtros, vistaCapa]);
 
   /* estado de la escena 3D */
+  // La rejilla de víctimas publica usuario vial O gravedad por celda, nunca el cruce: con ambos filtros las columnas se ocultan.
+  const rejillaSinCruce = filtros.capa === "victimas" && filtros.condicion !== "todas" && filtros.medida !== "n";
   const estado3d = useMemo<Estado3D | null>(() => {
     if (!vistaCapa) return null;
-    const r = rejillas?.estado === "listo" ? rejillas.datos[filtros.capa] : null;
+    const r = rejillas?.estado === "listo" && !rejillaSinCruce ? rejillas.datos[filtros.capa] : null;
     let celdas: Estado3D["celdas"] = null;
     if (r) {
       const resumen =
@@ -184,11 +186,23 @@ export default function PestanaComunas({ datos }: { datos: DatosMundo }) {
               gravedad: filtros.medida === "n" ? undefined : filtros.medida,
             })
           : valoresRejilla((r as RejillaIncidentes | RejillaHurto).celdas);
+      // la etiqueta de las columnas dice lo que de verdad cuentan: la rejilla de víctimas sí sigue usuario vial o gravedad (una a la vez)
+      const unidadCeldas =
+        filtros.capa !== "victimas"
+          ? vistaCapa.unidad
+          : filtros.medida !== "n"
+            ? filtros.medida === "muertos" ? "fallecidas" : "heridas"
+            : filtros.condicion !== "todas"
+              ? `víctimas (${CONDICIONES_UI.find((c) => c.clave === filtros.condicion)?.texto.toLowerCase() ?? filtros.condicion})`
+              : vistaCapa.unidad;
+      const alcance =
+        filtros.capa === "incidentes" ? "sin filtros de año, franja ni gravedad" : filtros.capa === "hurto" ? "sin filtros de año, franja ni modalidad" : "sin filtro de año";
       celdas = {
         celdas: resumen.celdas,
         maximo: resumen.maximo,
         grados: r.resolucion.grados,
-        unidad: vistaCapa.unidad,
+        unidad: unidadCeldas,
+        alcance,
         periodo: `${r.fuente.periodo.desde?.slice(0, 4) ?? "?"} → ${r.fuente.periodo.hasta?.slice(0, 4) ?? "?"}`,
         fuente: `MEData ${r.fuente.id}`,
       };
@@ -206,7 +220,7 @@ export default function PestanaComunas({ datos }: { datos: DatosMundo }) {
       estaciones,
       seleccion,
     };
-  }, [vistaCapa, rejillas, filtros.capa, filtros.condicion, filtros.medida, estaciones, seleccion]);
+  }, [vistaCapa, rejillas, rejillaSinCruce, filtros.capa, filtros.condicion, filtros.medida, estaciones, seleccion]);
 
   const cambiar = (c: Partial<Filtros>) => setFiltros((f) => ({ ...f, ...c }));
   const cambiarCapa = (capa: Capa) => setFiltros({ ...FILTROS_INICIALES, capa });
@@ -220,7 +234,7 @@ export default function PestanaComunas({ datos }: { datos: DatosMundo }) {
         <h2 className="m-0 text-xl font-extrabold tracking-tight text-[#1E3A5F]">Comunas: la Medellín de datos</h2>
         <p className="m-0 max-w-[72ch] text-[13.5px] text-[#475569]">
           Conteos agregados por comuna y corregimiento a partir de los conjuntos de MEData, con supresión de conteos menores a 5.
-          Elige la capa y los filtros; la tabla, el mapa y la ciudad 3D muestran exactamente las mismas cifras.
+          Elige la capa y los filtros; la tabla, el mapa y la ciudad 3D muestran exactamente las mismas cifras por comuna.
         </p>
       </div>
 
@@ -372,6 +386,11 @@ export default function PestanaComunas({ datos }: { datos: DatosMundo }) {
                   {rejillasCargando && <span className="text-[11.5px] text-[#475569]">Descargando la rejilla de 250 m…</span>}
                   {rejillas?.estado === "error" && (
                     <span className="text-[11.5px] text-[#B45309]">La rejilla de 250 m no respondió a las {horaColombia(rejillas.hora)}; se muestran solo las comunas.</span>
+                  )}
+                  {rejillas?.estado === "listo" && rejillaSinCruce && (
+                    <span className="text-[11.5px] text-[#B45309]" role="status">
+                      La rejilla de 250 m no publica usuario vial × gravedad; con ambos filtros las columnas se ocultan y quedan solo las comunas.
+                    </span>
                   )}
                 </>
               )}

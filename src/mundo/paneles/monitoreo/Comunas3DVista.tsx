@@ -119,7 +119,7 @@ export default function Comunas3DVista({
         </div>
         {estado.celdas && (
           <span>
-            Columnas: celdas de 250 m con ≥ 5 {estado.celdas.unidad}, todo el período ({estado.celdas.periodo}); altura ∝ √n
+            Columnas: celdas de 250 m con ≥ 5 {estado.celdas.unidad}, todo el período ({estado.celdas.periodo}), {estado.celdas.alcance}; altura ∝ √n
           </span>
         )}
         {estado.estaciones && <span>Faros: estaciones SIATA, color = categoría ICA (gris fuera de Medellín)</span>}

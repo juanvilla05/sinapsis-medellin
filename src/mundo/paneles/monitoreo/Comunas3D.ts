@@ -40,6 +40,8 @@ export interface CapaCeldas3D {
   /** resolución de la rejilla en grados */
   grados: number;
   unidad: string;
+  /** qué filtros de la vista NO aplican a la rejilla, para la leyenda ("sin filtros de año, franja ni gravedad") */
+  alcance: string;
   periodo: string;
   fuente: string;
 }
