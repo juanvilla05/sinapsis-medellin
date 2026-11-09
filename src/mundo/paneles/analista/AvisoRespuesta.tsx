@@ -18,12 +18,15 @@ export default function AvisoRespuesta({
   onReintentar,
   onDirecto,
   compacto = false,
+  titulo,
 }: {
   motivo: MotivoAviso;
   detalle: string;
   onReintentar?: () => void;
   onDirecto?: () => void;
   compacto?: boolean;
+  /** título propio en lugar del del motivo (p. ej. PulsoBot sin IA) */
+  titulo?: string;
 }) {
   const e = ESTILO[motivo];
   return (
@@ -41,7 +44,7 @@ export default function AvisoRespuesta({
       </span>
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-[13.5px] font-bold" style={{ color: e.color }}>
-          {e.titulo}
+          {titulo ?? e.titulo}
         </span>
         <p className="m-0 text-[13px] leading-snug text-[#0F172A]">{detalle}</p>
         {(onReintentar || onDirecto) && (
