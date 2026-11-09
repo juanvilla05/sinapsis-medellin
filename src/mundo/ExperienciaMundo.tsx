@@ -168,7 +168,8 @@ export default function ExperienciaMundo({
     (async () => {
       let a: AireAgente | null = null;
       try {
-        const r = await fetch("/api/siata", { cache: "no-store", signal: ctrl.signal });
+        // 10 s propios: si la ruta cuelga (instancia fría, red del auditorio) la Operadora pasa a "sin señal".
+        const r = await fetch("/api/siata", { cache: "no-store", signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(10_000)]) });
         if (r.ok && (r.headers.get("content-type") ?? "").includes("json")) a = aireDe(await r.json());
       } catch {
         a = null;
