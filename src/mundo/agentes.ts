@@ -123,7 +123,7 @@ export const AGENTES: Record<IdAgente, Agente> = {
     // Nunca dice «en vivo» ni «ahora mismo»: el snapshot es ISR (5 min) o la copia guardada; siempre se dice cuándo.
     frase: (d) => {
       if (d.aire === undefined) return `Consultando las estaciones de SIATA…`;
-      if (d.aire === null) return `Sin señal de SIATA en este momento. Muestro la seguridad vial y para moverse por cada comuna con los datos guardados.`;
+      if (d.aire === null) return `Sin señal de SIATA en este momento. Muestro la seguridad vial y las comunas con los datos guardados.`;
       const { validas, guardado, lectura, capturado } = d.aire;
       const cuantas = `${miles(validas)} ${plural(validas, "estación válida", "estaciones válidas")} de SIATA en Medellín`;
       if (guardado) {
