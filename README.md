@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SINAPSIS · Centro de Inteligencia de Datos de Medellín
 
-## Getting Started
+Agentes que auditan, limpian y explican **en vivo** los datos abiertos de [MEData](https://medata.app.medellin.gov.co/), el portal de datos abiertos de la Alcaldía de Medellín.
 
-First, run the development server:
+Proyecto de la **Hackathon de Datos ITM 2026** · Isabela Zuluaga y Juan Camilo Villa · Institución Universitaria ITM.
+
+> Propuesta académica presentada a la Alcaldía de Medellín. No es un sitio oficial de la Alcaldía.
+
+## Hallazgo principal
+
+**El 92,6 % de los conjuntos de MEData con periodicidad declarada lleva más de 1,5 veces ese plazo sin actualizarse** (313 de 338, según la fecha de modificación que publica el propio catálogo, consultado el 8 de noviembre de 2026).
+
+## Despachos
+
+| Despacho | Estado | Qué hace |
+|---|---|---|
+| Reloj de Frescura (`/frescura`) | ✅ | Audita los 433 conjuntos del catálogo y compara la periodicidad prometida con la última modificación; ranking por secretaría; consulta en vivo |
+| Laboratorio de Limpieza (`/laboratorio`) | ✅ | Descarga en vivo el inicio y el final de un archivo de MEData (HTTP Range), detecta la codificación, perfila columnas, aplica reglas de limpieza y muestra el antes y el después |
+| Ventanilla de Apertura | 🚧 | Propuestas de mejora por conjunto |
+| Analista IA | 🚧 | Preguntas en español con respuestas citadas |
+| Sala de Monitoreo | 🚧 | Seguridad vial y seguridad para moverse por barrio |
+
+## Ejecutar en local
+
+Requisitos: **Node.js 20 o superior** (probado con Node 24.15) y conexión a internet (la app consulta MEData).
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Pipeline (actualizar los datos guardados)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run pipeline
+```
 
-## Learn More
+Descarga el catálogo de MEData, lo audita y escribe `src/data/catalogo.json` y `src/data/resumen-catalogo.json`.
 
-To learn more about Next.js, take a look at the following resources:
+## Estructura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/lib/calidad.ts       motor de diagnóstico y limpieza (compartido por el pipeline y la limpieza en vivo)
+src/lib/catalogo.ts      lectura y auditoría del catálogo DKAN de MEData
+src/lib/laboratorio.ts   descarga parcial (inicio + final) y análisis en vivo
+src/app/api/*            endpoints en vivo (catálogo y laboratorio)
+scripts/pipeline.ts      pipeline automático
+src/data/                resultados guardados del pipeline
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Datos y fuentes
 
-## Deploy on Vercel
+- **MEData — Alcaldía de Medellín**: catálogo `https://medata.app.medellin.gov.co/api/1/metastore/schemas/dataset/items` y archivos CSV de cada conjunto. Uso según los términos del portal de datos abiertos.
+- No se almacenan ni se publican datos personales: el Laboratorio procesa muestras en memoria y solo devuelve diagnósticos y unas pocas filas de ejemplo.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Uso de IA
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Se usó Claude (Anthropic) como asistente de programación para escribir y depurar el código. El equipo revisó y puede explicar cada componente.
