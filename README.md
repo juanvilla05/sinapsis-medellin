@@ -24,12 +24,14 @@ La portada es un **mundo 3D** de La Alpujarra (three.js): se camina con WASD o c
 | Reloj de Frescura (mundo 3D y `/frescura`) | ✅ | Audita los 433 conjuntos del catálogo y compara la periodicidad prometida con la última modificación; ranking por secretaría; consulta en vivo |
 | Laboratorio de Limpieza (mundo 3D y `/laboratorio`) | ✅ | Descarga en vivo el inicio y el final de un archivo de MEData (HTTP Range), detecta la codificación, perfila columnas, aplica reglas de limpieza y muestra el antes y el después |
 | Ventanilla de Apertura | 🚧 | Propuestas de mejora por conjunto |
-| Analista IA | 🚧 | Preguntas en español con respuestas citadas |
-| Sala de Monitoreo | 🚧 | Seguridad vial y seguridad para moverse por barrio |
+| Analista IA (mundo 3D y `/analista`) | ✅ | Preguntas en español; cada cifra sale de una herramienta determinista y se cita con conjunto, campo, licencia y fecha de corte. Con clave usa Gemini; sin clave responde en modo directo |
+| Sala de Monitoreo · PULSO (mundo 3D y `/monitoreo`) | ✅ | Aire en vivo de SIATA (ICA, Resolución 2254 de 2017), brecha de muertes viales MEData vs Policía, y hurto e incidentes por comuna en tabla, mapa y Medellín 3D |
 
 ## Ejecutar en local
 
-Requisitos: **Node.js 20 o superior** (probado con Node 24.15) y conexión a internet (la app consulta MEData).
+Versión en línea: **https://sinapsis-medellin.vercel.app**. Los pasos que sigue el jurado están en [`instrucciones.txt`](instrucciones.txt).
+
+Requisitos: **Node.js 20 o superior** (probado con Node 24.15) y conexión a internet (la app consulta MEData, SIATA y datos.gov.co). No hace falta ninguna clave; para el chat con Gemini, copiar `.env.example` a `.env.local`.
 
 ```bash
 npm install
@@ -46,6 +48,13 @@ npm run pipeline
 
 Descarga el catálogo de MEData, lo audita y escribe `src/data/catalogo.json` y `src/data/resumen-catalogo.json`.
 
+Agregados de la Sala de Monitoreo (Python 3, solo biblioteca estándar; descarga ~240 MB de CSV de MEData):
+
+```bash
+python3 scripts-dev/agregados.py   # rejillas de 250 m y tablas por comuna, con supresión de conteos < 5
+python3 scripts-dev/fixtures.py    # copias de respaldo de Policía, consolidado 303 y comunas
+```
+
 ## Estructura
 
 ```
@@ -61,9 +70,19 @@ src/data/                resultados guardados del pipeline
 
 ## Datos y fuentes
 
-- **MEData — Alcaldía de Medellín**: catálogo `https://medata.app.medellin.gov.co/api/1/metastore/schemas/dataset/items` y archivos CSV de cada conjunto. Uso según los términos del portal de datos abiertos.
+- **MEData — Alcaldía de Medellín**: catálogo `https://medata.app.medellin.gov.co/api/1/metastore/schemas/dataset/items` y archivos CSV de cada conjunto; en la Sala de Monitoreo, Incidentes viales (1-023-25-000094), Víctimas en incidentes viales (1-023-25-000360), Hurto a persona (1-027-23-000011) y el consolidado de criminalidad por comuna (1-027-23-000303), todos CC BY-SA 4.0.
+- **datos.gov.co**: Homicidios en accidente de tránsito de la Policía Nacional (`ha6j-pa2r`), filtrado a Medellín, CC BY-SA 4.0.
+- **SIATA**: PM2.5 por estación (capas 602 y 603 del visor), licencia no declarada por la fuente.
+- **Datos Abiertos del Distrito (GeoMedellín)**: comunas y corregimientos, licencia no declarada por la fuente.
+- La Sala de Monitoreo publica solo agregados: celdas de 250 m con 5 casos o más, conteos de 1 a 4 suprimidos y supresión complementaria para que no se puedan recuperar restando (`src/lib/monitoreo/datos/README.md`). Si una fuente no responde, se muestra la copia guardada con su fecha.
 - No se almacenan ni se publican datos personales: el Laboratorio procesa muestras en memoria y solo devuelve diagnósticos y unas pocas filas de ejemplo. Las columnas con datos personales o cuasi-identificadores (nombre, documento, placa, teléfono, sexo, edad, dirección, coordenadas…) se detectan por token del encabezado, salen como "•••" en el ejemplo y fuera del CSV descargable; las horas se redondean a la hora en punto (se conservan fecha y barrio).
 
 ## Uso de IA
 
 Se usó Claude (Anthropic) como asistente de programación para escribir y depurar el código, y Claude Design para el diseño visual del mundo 3D. El equipo revisó y puede explicar cada componente.
+
+Dentro de la aplicación, el Analista puede usar Gemini 2.5 Flash (Google) si hay clave: interpreta la pregunta y elige una herramienta, pero no genera cifras; todas salen de funciones deterministas sobre las fuentes citadas.
+
+## Licencia
+
+Código bajo licencia MIT (ver [`LICENSE`](LICENSE)). Los datos derivados de MEData y datos.gov.co conservan la licencia de su fuente (CC BY-SA 4.0).

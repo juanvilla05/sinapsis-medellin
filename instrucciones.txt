@@ -1,0 +1,80 @@
+INSTRUCCIONES - SINAPSIS · Centro de Inteligencia de Datos de Medellín (con PULSO · la ciudad en vivo)
+Equipo: SINAPSIS (Isabela Zuluaga y Juan Camilo Villa) · Hackathon de Datos ITM 2026
+Modalidad: Visualización · Repositorio: https://github.com/zuluagaisabela/sinapsis-medellin
+
+1. QUÉ ES
+   Aplicación web con un mundo 3D de La Alpujarra donde agentes auditan, limpian y explican en vivo
+   los datos abiertos de MEData: frescura del catálogo, limpieza de archivos, calidad del aire (SIATA),
+   seguridad vial y hurto por comuna en una Medellín 3D, y un Analista que responde citando la fuente.
+   Pregunta que responde: ¿qué tan al día están los datos abiertos de Medellín y qué se puede (y no se
+   puede) saber hoy con ellos sobre la ciudad?
+
+2. PROBARLO EN LÍNEA (recomendado, no requiere cuenta ni claves)
+   Abrir https://sinapsis-medellin.vercel.app
+   Versión sin 3D (panel ejecutivo): https://sinapsis-medellin.vercel.app/panel
+
+3. EJECUTARLO EN EL COMPUTADOR
+   Requisitos: Node.js 20 o superior (probado con Node 24) y conexión a internet.
+   No necesita ninguna clave: sin clave de IA el Analista responde en "modo directo".
+   git clone https://github.com/zuluagaisabela/sinapsis-medellin.git
+   cd sinapsis-medellin
+   npm install
+   npm run dev
+   Abrir http://localhost:3000
+   Opcional (chat con Gemini): copiar .env.example a .env.local y poner GOOGLE_GENERATIVE_AI_API_KEY.
+   Opcional (actualizar los datos guardados):
+     npm run pipeline                      catálogo de MEData -> src/data/*.json
+     python3 scripts-dev/agregados.py      CSV de MEData (~240 MB) -> src/lib/monitoreo/datos/*.json
+     python3 scripts-dev/fixtures.py       copias de respaldo de las fuentes vivas
+
+4. QUÉ DEBE VER EL JURADO
+   a) Portada: "92,6 %" de los conjuntos de MEData con periodicidad declarada está atrasado: 313 de 338.
+   En el mundo 3D: "Entrar a SINAPSIS", clic en un despacho del menú (el personaje camina hasta él)
+   y tecla E para abrirlo. Cada despacho también tiene su página: /monitoreo, /analista, /laboratorio.
+   b) "05 Sala de Monitoreo" (o /monitoreo):
+      - Pestaña Aire: estaciones SIATA de Medellín con PM2.5, índice y categoría (Resolución 2254 de
+        2017) y la hora de la última lectura de hoy.
+      - Pestaña Brecha: MEData deja de publicar muertes viales en 2021; la Policía Nacional reporta
+        563 en 2023 (serie MEData vs Policía por año).
+      - Pestaña Comunas > "Ver en 3D": Medellín 3D con las 21 comunas y corregimientos elevados según
+        los casos, columnas de 250 m y faros de SIATA. Los filtros cambian tabla, mapa y 3D a la vez.
+   c) "04 Analista IA" (o /analista) > "¿Cuántas muertes viales hubo en 2023 según MEData y
+      según la Policía?": 563 según la Policía, MEData sin publicar ese año, con conjunto, campo,
+      licencia y fecha de corte de cada cifra.
+   d) "02 Laboratorio de Limpieza" (o /laboratorio) > conjunto "Víctimas en Incidentes
+      viales": puntaje de calidad 0 -> 98, 52.428 filas vacías de 65.489 leídas, y 7 columnas con
+      datos personales (sexo, edad, dirección, coordenadas, radicado...) fuera del CSV descargable.
+   Si una fuente no responde, la aplicación lo dice y muestra la copia guardada con su fecha.
+
+5. DATOS Y FUENTES (sin datos personales: solo agregados; conteos de 1 a 4 suprimidos)
+   src/data/catalogo.json, resumen-catalogo.json · MEData, catálogo de conjuntos (433) ·
+     https://medata.app.medellin.gov.co/api/1/metastore/schemas/dataset/items · términos del portal MEData
+   src/lib/monitoreo/datos/*incidentes* · MEData 1-023-25-000094 Incidentes viales ·
+     https://medata.app.medellin.gov.co/dataset/1-023-25-000094 · CC BY-SA 4.0
+   src/lib/monitoreo/datos/*victimas* · MEData 1-023-25-000360 Víctimas en Incidentes viales ·
+     https://medata.app.medellin.gov.co/dataset/1-023-25-000360 · CC BY-SA 4.0
+   src/lib/monitoreo/datos/*hurto* · MEData 1-027-23-000011 Hurto a persona ·
+     https://medata.app.medellin.gov.co/dataset/1-027-23-000011 · CC BY-SA 4.0
+   src/lib/monitoreo/fixtures/consolidado-303.* (y en vivo) · MEData 1-027-23-000303 Consolidado
+     cantidad de casos criminalidad en comunas por año · https://medata.app.medellin.gov.co/dataset/1-027-23-000303 · CC BY-SA 4.0
+   src/lib/monitoreo/fixtures/policia-anio.json (y en vivo) · datos.gov.co ha6j-pa2r Homicidios
+     accidente de tránsito, Policía Nacional, filtrado a Medellín (codigo_dane 05001000) ·
+     https://www.datos.gov.co/d/ha6j-pa2r · CC BY-SA 4.0
+   src/lib/monitoreo/fixtures/comunas.geojson (y en vivo) · Datos Abiertos del Distrito (GeoMedellín),
+     Comunas y corregimientos · https://geomedellin-m-medellin.opendata.arcgis.com/datasets/M-Medellin::comunas-y-corregimientos ·
+     licencia no declarada por la fuente (se usa con atribución)
+   src/lib/fixtures/siata-602.json, siata-603.json (y en vivo) · SIATA, capas ICA PM2.5 de estaciones ·
+     https://siata.gov.co · licencia no declarada por la fuente (se usa con atribución)
+   Laboratorio: cualquier archivo CSV de MEData, leído en vivo; no se guarda.
+   Detalle de cada agregado y de la supresión: src/lib/monitoreo/datos/README.md
+
+6. USO DE IA
+   - Claude (Anthropic): asistente de programación para escribir y depurar código, y Claude Design para
+     el diseño visual del mundo 3D. El equipo revisó y puede explicar cada componente.
+   - Gemini 2.5 Flash (Google), opcional y solo con clave: en el Analista interpreta la pregunta y
+     elige una herramienta. No genera cifras: todas salen de funciones deterministas sobre las fuentes
+     de la sección 5. Sin clave, las mismas herramientas responden en modo directo.
+
+7. CONTACTO
+   Juan Camilo Villa (líder) · cfinancieramedellin@gmail.com
+   Isabela Zuluaga
