@@ -42,3 +42,6 @@ next-env.d.ts
 
 # ejemplo de configuración (sí se versiona)
 !.env.example
+
+# caché local de CSV crudos de MEData (scripts-dev/agregados.py); nunca se versiona
+/.cache-datos/
