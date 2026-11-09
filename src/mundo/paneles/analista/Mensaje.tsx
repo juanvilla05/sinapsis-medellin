@@ -13,13 +13,14 @@ export function esRespuesta(x: unknown): x is RespuestaHerramienta<unknown> {
   return r.ok === true ? Array.isArray(r.citas) : typeof r.motivo === "string" && typeof r.detalle === "string";
 }
 
-export function Burbuja({ rol, children }: { rol: "user" | "assistant"; children: React.ReactNode }) {
+/** `oscuro`: variante para fondos oscuros (PulsoBot sobre el mapa). Por defecto, tema claro. */
+export function Burbuja({ rol, children, oscuro = false }: { rol: "user" | "assistant"; children: React.ReactNode; oscuro?: boolean }) {
   const usuario = rol === "user";
   return (
     <div className={`flex ${usuario ? "justify-end" : "justify-start"}`}>
       <div
         className={`flex max-w-[min(100%,46rem)] flex-col gap-2.5 ${
-          usuario ? "rounded-2xl rounded-br-md bg-[#1E3A5F] px-4 py-2.5 text-white" : "w-full"
+          usuario ? `rounded-2xl rounded-br-md ${oscuro ? "bg-[#2563EB]" : "bg-[#1E3A5F]"} px-4 py-2.5 text-white` : "w-full"
         }`}
       >
         {children}
@@ -28,10 +29,14 @@ export function Burbuja({ rol, children }: { rol: "user" | "assistant"; children
   );
 }
 
-export function Consultando({ nombre }: { nombre: string }) {
+export function Consultando({ nombre, oscuro = false }: { nombre: string; oscuro?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-[#E3EAF3] bg-[#F4F7FB] px-4 py-2.5 text-[13px] text-[#475569]">
-      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#2563EB]" aria-hidden="true" />
+    <div
+      className={`flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-[13px] ${
+        oscuro ? "border-white/10 bg-white/5 text-white/75" : "border-[#E3EAF3] bg-[#F4F7FB] text-[#475569]"
+      }`}
+    >
+      <span className={`h-2.5 w-2.5 animate-pulse rounded-full motion-reduce:animate-none ${oscuro ? "bg-[#60A5FA]" : "bg-[#2563EB]"}`} aria-hidden="true" />
       Consultando {nombre}…
     </div>
   );
@@ -41,9 +46,12 @@ export function Consultando({ nombre }: { nombre: string }) {
 export default function Mensaje({
   mensaje,
   onVerSinIA,
+  oscuro = false,
 }: {
   mensaje: UIMessage;
   onVerSinIA?: (herramienta: NombreHerramienta, args: Record<string, unknown>) => void;
+  /** variante para fondos oscuros (PulsoBot); las tarjetas de respuesta siguen blancas */
+  oscuro?: boolean;
 }) {
   if (mensaje.role === "system") return null;
   const rol = mensaje.role;
@@ -53,7 +61,7 @@ export default function Mensaje({
     if (part.type === "text") {
       if (!part.text.trim()) return null;
       return (
-        <p key={i} className={`m-0 whitespace-pre-wrap text-[14px] leading-relaxed ${rol === "user" ? "text-white" : "text-[#0F172A]"}`}>
+        <p key={i} className={`m-0 whitespace-pre-wrap text-[14px] leading-relaxed ${rol === "user" || oscuro ? "text-white" : "text-[#0F172A]"}`}>
           {part.text}
         </p>
       );
@@ -68,7 +76,7 @@ export default function Mensaje({
       switch (part.state) {
         case "input-streaming":
         case "input-available":
-          return <Consultando key={part.toolCallId} nombre={legible} />;
+          return <Consultando key={part.toolCallId} nombre={legible} oscuro={oscuro} />;
         case "output-available": {
           const salida = part.output;
           if (!nombre || !esRespuesta(salida)) {
@@ -90,7 +98,7 @@ export default function Mensaje({
   if (!conContenido) return null;
 
   return (
-    <Burbuja rol={rol}>
+    <Burbuja rol={rol} oscuro={oscuro}>
       {partes}
       {rol === "assistant" && onVerSinIA && invocaciones.length > 0 && (
         <div className="flex flex-wrap gap-2">
