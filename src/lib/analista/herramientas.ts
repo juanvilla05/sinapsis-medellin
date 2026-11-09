@@ -7,7 +7,7 @@ import resumenJson from "@/data/resumen-catalogo.json";
 import { MEDATA_BASE, MEDATA_CATALOGO, type ConjuntoAuditado, type EstadoFrescura, type ResumenCatalogo } from "@/lib/catalogo";
 import { analizarEnVivo } from "@/lib/laboratorio";
 import { MUNICIPIOS_AMVA } from "@/lib/territorio";
-import { fechaColombia } from "@/mundo/areas";
+import { esFechaSoloDia, fechaColombia } from "@/mundo/areas";
 import { explicarFuentes, TEMAS_FAQ } from "./faq";
 import type { NombreHerramienta } from "./sugeridas";
 
@@ -36,6 +36,20 @@ export interface Herramienta<A, T> {
 
 const definir = <A, T>(h: Herramienta<A, T>) => h;
 
+/** Plazo máximo de una descarga de MEData dentro de una herramienta (muy por debajo del maxDuration de 60 s de la ruta). */
+const PLAZO_MEDATA_MS = 20_000;
+/** Plazo máximo de cualquier herramienta, para que el chat reciba un fallo con texto propio y no el corte de Vercel. */
+const PLAZO_HERRAMIENTA_MS = 25_000;
+
+/** Rechaza con Error("plazo") si la promesa no termina a tiempo. No cancela el trabajo subyacente, solo deja de esperarlo. */
+function conPlazo<T>(promesa: Promise<T>, ms: number): Promise<T> {
+  let temporizador: ReturnType<typeof setTimeout> | undefined;
+  const plazo = new Promise<never>((_, rechazar) => {
+    temporizador = setTimeout(() => rechazar(new Error("plazo")), ms);
+  });
+  return Promise.race([promesa, plazo]).finally(() => clearTimeout(temporizador));
+}
+
 const resumen = resumenJson as ResumenCatalogo;
 const catalogo = catalogoJson as ConjuntoAuditado[];
 
@@ -54,6 +68,7 @@ export function horaBogota(d = new Date()) {
 
 /** "8 de noviembre de 2026, 23:20" en hora de Colombia, para que el modelo cite la fecha correcta sin convertir zonas horarias. */
 export function fechaCorteLegible(iso: string) {
+  if (esFechaSoloDia(iso)) return fechaColombia(iso);
   return `${fechaColombia(iso)}, ${horaBogota(new Date(iso))}`;
 }
 
@@ -340,7 +355,8 @@ const limpiarConjunto = definir<z.infer<typeof esquemaLimpiar>, DatosLimpieza>({
     if (!conjunto.csvUrl.startsWith(`${MEDATA_BASE}/`))
       return { ok: false, motivo: "error", detalle: "El archivo de este conjunto está fuera del dominio de MEData y no se descarga por seguridad." };
     try {
-      const inf = await analizarEnVivo(conjunto.csvUrl);
+      // laboratorio.ts (archivo de Isabela) no acepta AbortSignal: el plazo se pone aquí para no esperar hasta que Vercel mate la función.
+      const inf = await conPlazo(analizarEnVivo(conjunto.csvUrl), PLAZO_MEDATA_MS);
       const a = inf.resultado.antes;
       return {
         ok: true,
@@ -419,7 +435,7 @@ export async function ejecutarHerramienta(nombre: NombreHerramienta, args: unkno
     return { ok: false, motivo: "error", detalle: "Los argumentos de la consulta no son válidos para esta herramienta." };
   }
   try {
-    return await h.ejecutar(parsed.data);
+    return await conPlazo(h.ejecutar(parsed.data), PLAZO_HERRAMIENTA_MS);
   } catch {
     return { ok: false, motivo: "error", detalle: `La herramienta no pudo completar la consulta a las ${horaBogota()}.` };
   }

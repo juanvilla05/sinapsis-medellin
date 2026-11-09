@@ -60,8 +60,15 @@ export function decimal(n: number, d = 1) {
   return n.toFixed(d).replace(".", ",");
 }
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-/** Fecha en hora de Colombia (UTC-5, sin horario de verano). */
+/** "AAAA-MM-DD" sin hora: una fecha de calendario (así vienen las 433 fechas `modified` del catálogo). */
+export const esFechaSoloDia = (iso: string) => /^\d{4}-\d{2}-\d{2}$/.test(iso);
+
+/** Fecha en hora de Colombia (UTC-5, sin horario de verano). Una fecha solo-día se muestra tal cual, sin desplazar. */
 export function fechaColombia(iso: string) {
+  if (esFechaSoloDia(iso)) {
+    const [a, m, d] = iso.split("-").map(Number);
+    return `${d} de ${MESES[m - 1]} de ${a}`;
+  }
   const d = new Date(new Date(iso).getTime() - 5 * 3600_000);
   return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
 }

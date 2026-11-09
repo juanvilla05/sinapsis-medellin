@@ -2,7 +2,7 @@ import type { RespuestaFaq } from "@/lib/analista/faq";
 import type { Cita, DatosBusqueda, DatosFrescura, DatosLimpieza, Respuesta as RespuestaHerramienta } from "@/lib/analista/herramientas";
 import { NOMBRES_HERRAMIENTAS, type NombreHerramienta } from "@/lib/analista/sugeridas";
 import type { EstadoFrescura } from "@/lib/catalogo";
-import { decimal, fechaColombia, miles } from "../../areas";
+import { decimal, esFechaSoloDia, fechaColombia, miles } from "../../areas";
 
 const EST: Record<EstadoFrescura, { t: string; bg: string; fg: string }> = {
   critico: { t: "Crítico", bg: "#FEF2F2", fg: "#B91C1C" },
@@ -12,14 +12,13 @@ const EST: Record<EstadoFrescura, { t: string; bg: string; fg: string }> = {
   "sin-fecha": { t: "Sin fecha", bg: "#F1F5F9", fg: "#475569" },
 };
 
-/** "8 de noviembre de 2026, 11:20 p. m." en hora de Colombia (UTC-5). */
+/** "8 de noviembre de 2026, 11:20 p. m." en hora de Colombia (UTC-5). Una fecha solo-día ("2023-08-16") se muestra sin hora. */
 export function fechaHoraColombia(iso: string) {
+  if (esFechaSoloDia(iso)) return fechaColombia(iso);
   const d = new Date(new Date(iso).getTime() - 5 * 3600_000);
   const h = d.getUTCHours();
   const h12 = h % 12 === 0 ? 12 : h % 12;
   const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  const esMedianoche = h === 0 && d.getUTCMinutes() === 0;
-  if (esMedianoche && iso.length <= 10) return fechaColombia(iso);
   return `${fechaColombia(iso)}, ${h12}:${mm} ${h < 12 ? "a. m." : "p. m."}`;
 }
 
