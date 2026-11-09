@@ -28,7 +28,13 @@ export default function Encabezado() {
           </span>
         </Link>
         <nav className="ml-6 hidden items-center gap-1 lg:flex" aria-label="Despachos">
-          {DESPACHOS.map((d) => (
+          <Link href="/" className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-white/20">
+            Mundo 3D
+          </Link>
+          <Link href="/panel" className="rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white">
+            Panel
+          </Link>
+          {DESPACHOS.filter((d) => d.listo).map((d) => (
             <Link
               key={d.id}
               href={d.ruta}

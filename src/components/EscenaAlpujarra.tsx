@@ -285,7 +285,7 @@ export default function EscenaAlpujarra() {
 
       {/* Despachos */}
       {DESPACHOS.map((d, i) => (
-        <a key={d.id} href={d.ruta} className="despacho" aria-label={`${d.nombre}: ${d.descripcion}`}>
+        <a key={d.id} href={d.listo ? d.ruta : "/"} className="despacho" aria-label={`${d.nombre}: ${d.descripcion}`}>
           <circle cx={d.x} cy={d.y} r="26" fill={d.color} opacity="0.25">
             <animate attributeName="r" values="18;34;18" dur="2.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.45;0;0.45" dur="2.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
@@ -293,7 +293,7 @@ export default function EscenaAlpujarra() {
           <circle cx={d.x} cy={d.y} r="11" fill={d.color} stroke="#0b1324" strokeWidth="3" filter="url(#brillo)" />
           <g className="despacho-etiqueta">
             <rect x={d.x - 92} y={d.y - 62} width="184" height="34" rx="17" fill="#0b1324" fillOpacity="0.88" stroke={d.color} strokeWidth="1.5" />
-            <text x={d.x} y={d.y - 40} textAnchor="middle" fill="#f8fafc" fontSize="15" fontWeight="700" fontFamily="var(--font-manrope), sans-serif">
+            <text x={d.x} y={d.y - 40} textAnchor="middle" fill="#f8fafc" fontSize="15" fontWeight="700" fontFamily="var(--font-jakarta), sans-serif">
               {d.nombre}
             </text>
           </g>
