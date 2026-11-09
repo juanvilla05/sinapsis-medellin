@@ -14,6 +14,9 @@ type Estado = "cargando" | "error" | "listo";
 
 const NOMBRE_FUENTE = "SIATA – Área Metropolitana del Valle de Aburrá (capas 602/603 del visor)";
 
+/** Error con texto propio (ya en español) que sí se puede mostrar en pantalla; cualquier otro se generaliza. */
+class ErrorServidor extends Error {}
+
 /** Última lectura de PM2.5 por estación de SIATA, filtrada a Medellín por defecto. */
 export default function PestanaAire() {
   const [estado, setEstado] = useState<Estado>("cargando");
@@ -28,12 +31,17 @@ export default function PestanaAire() {
     setErrorRed(null);
     try {
       const r = await fetch("/api/siata", { cache: "no-store" });
+      // un 500 de Next llega como HTML: no intentar parsearlo ni mostrar el error del navegador
+      if (!r.headers.get("content-type")?.includes("application/json")) {
+        throw new ErrorServidor(`El servidor no respondió (HTTP ${r.status})`);
+      }
       const j = (await r.json()) as SnapshotSiata;
-      if (!j.ok) throw new Error(j.error);
+      // `j.error` ya viene saneado desde `obtenerAire()` (motivo propio, en español)
+      if (!j.ok) throw new ErrorServidor(j.error || `El servidor no respondió (HTTP ${r.status})`);
       setSnapshot(j);
       setEstado("listo");
     } catch (e) {
-      setErrorRed(e instanceof Error ? e.message : String(e));
+      setErrorRed(e instanceof ErrorServidor ? e.message : "Sin conexión con el servidor");
       setFalloA(new Date().toISOString());
       setEstado("error");
     }

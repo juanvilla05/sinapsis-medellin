@@ -5,10 +5,11 @@ export interface OpcionChip<T extends string> {
   texto: string;
   /** conteo que acompaña al texto */
   n?: number;
-  /** color del chip activo (por defecto azul profundo) */
+  /** color de la categoría; activa el modo coloreado del chip */
   color?: string;
-  /** fondo y tinta del chip inactivo cuando lleva color */
+  /** fondo del chip inactivo cuando lleva color */
   fondo?: string;
+  /** tono oscuro: texto del chip inactivo y fondo del activo (contraste AA con blanco) */
   tinta?: string;
   deshabilitado?: boolean;
 }
@@ -30,7 +31,8 @@ export default function Chips<T extends string>({
       {opciones.map((o) => {
         const activo = o.clave === valor;
         const estilo = activo
-          ? { background: o.color ?? "#1E3A5F", color: "#fff" }
+          ? // la tinta (tono oscuro) garantiza ≥ 4,5:1 con texto blanco; `color` solo no llega en Buena/Aceptable
+            { background: o.tinta ?? o.color ?? "#1E3A5F", color: "#fff" }
           : o.color
             ? { background: o.fondo ?? "#F1F5F9", color: o.tinta ?? "#475569" }
             : { background: "#F1F5F9", color: "#475569" };

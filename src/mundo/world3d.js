@@ -3,6 +3,9 @@
  * cabeza redondeada sin botón superior y muros sin botones (para no evocar una marca de juguetes). */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+// ★ datos reales en el mundo: edificios de secretarías, videowall y agentes (cifras derivadas, nunca a mano)
+import { crearSecretarias, dibujarVideowall } from './secretarias.js';
+import { COLOR_GLOBO, TEXTO_ESTADO_AGENTE, evaluarAgentes } from './agentes';
 
 let FONT_SANS = "'Plus Jakarta Sans', sans-serif";
 let FONT_MONO = "'JetBrains Mono', monospace";
@@ -158,6 +161,7 @@ function flagTex(stripes) {
 export function createWorld(el, cb = {}) {
   if (cb.fonts) { FONT_SANS = cb.fonts.sans || FONT_SANS; FONT_MONO = cb.fonts.mono || FONT_MONO; }
   const reduced = !!cb.reducedMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let datosActuales = cb.datos || null; // ★ DatosMundo: alimenta secretarías, videowall y agentes
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -353,12 +357,13 @@ export function createWorld(el, cb = {}) {
   plant(-17.2, 4.0);
   // monitoreo
   const vw = new THREE.Group();
-  const [mc, mx] = canvas(512, 256); mx.fillStyle = '#12233D'; mx.fillRect(0, 0, 512, 256);
-  for (let i = 0; i < 70; i++) { mx.fillStyle = ['#60A5FA', '#93C5FD', '#2563EB'][i % 3]; mx.beginPath(); mx.arc((i * 97) % 512, (i * 53) % 256, 3 + (i % 4), 0, 7); mx.fill(); }
-  mx.strokeStyle = '#3B82F6'; mx.lineWidth = 2; for (let i = 0; i < 8; i++) { mx.beginPath(); mx.moveTo(0, i * 36); mx.bezierCurveTo(160, i * 30 + 40, 320, i * 36 - 30, 512, i * 34); mx.stroke(); }
-  const mapT = tex(mc);
+  const [mc, mx] = canvas(512, 256);
+  // ★ videowall con barras reales de datos.secretarias (o vacío con texto); nunca puntos pseudoaleatorios
+  const pintarVideowall = () => dibujarVideowall(mx, datosActuales ? datosActuales.secretarias : [], { fuenteSans: FONT_SANS, fuenteMono: FONT_MONO });
+  pintarVideowall();
+  const mapT = tex(mc); const vwTexturas = [mapT];
   for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
-    const t = mapT.clone(); t.needsUpdate = true; t.offset.set(i / 3, j / 2); t.repeat.set(1 / 3, 1 / 2);
+    const t = mapT.clone(); t.needsUpdate = true; t.offset.set(i / 3, j / 2); t.repeat.set(1 / 3, 1 / 2); vwTexturas.push(t);
     const s = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.05, 0.1), [navy, navy, navy, navy, new THREE.MeshStandardMaterial({ map: t, emissive: C('#FFFFFF'), emissiveMap: t, emissiveIntensity: 0.7 }), navy]);
     s.position.set(-1.95 + i * 1.95, 0.55 + (1 - j) * 1.1, 0); vw.add(s);
   }
@@ -412,9 +417,31 @@ export function createWorld(el, cb = {}) {
   const youL = mkLabel('Tú', { background: '#2563EB', color: '#fff', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px' });
   const bubble = mkLabel('', { background: '#FFFFFF', border: '1px solid #E3EAF3', borderRadius: '14px', padding: '10px 13px', fontSize: '13px', color: '#0F172A', maxWidth: '240px', whiteSpace: 'normal', width: 'max-content', boxShadow: '0 12px 28px rgba(30,58,95,.18)', display: 'none', lineHeight: '1.4' });
 
+  // ★ secretarías: edificios de datos alrededor de la plaza (ver secretarias.js); respetan los obstáculos del mundo
+  const secretarias = crearSecretarias(scene, datosActuales ? datosActuales.secretarias : [], { plastic, addAABB, obstaculos: obstacles, mkLabel, labels, pill });
+  // ★ globos de notificación sobre cada agente (cifra real + color por estado) y frases dinámicas del diálogo
+  // COLOR_GLOBO (no COLOR_AGENTE): fondos ≥ 4,5:1 con texto blanco de 10,5 px para que la cifra se lea en el proyector
+  const frases = {}, globos = {};
+  const estiloGlobo = { background: COLOR_GLOBO.esperando, color: '#fff', fontFamily: FONT_MONO, fontSize: '10.5px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', border: '2px solid #fff', boxShadow: '0 4px 10px rgba(30,58,95,.22)', minWidth: '22px', textAlign: 'center', lineHeight: '16px', display: 'none' };
+  Object.keys(agents).forEach(id => { globos[id] = mkLabel('', estiloGlobo); });
+  const aplicarAgente = (id, info = {}) => {
+    if (info.frase != null) frases[id] = info.frase;
+    const g = globos[id]; if (!g) return;
+    if (info.cifra != null) g.textContent = info.cifra;
+    if (info.estado) { g.style.background = COLOR_GLOBO[info.estado] || COLOR_GLOBO.esperando; g.title = TEXTO_ESTADO_AGENTE[info.estado] || ''; g.dataset.estado = info.estado; }
+  };
+  const aplicarDatos = (d) => {
+    if (!d) return; datosActuales = d;
+    secretarias.actualizar(d.secretarias || []);
+    pintarVideowall(); vwTexturas.forEach(t => { t.needsUpdate = true; });
+    if (d.porEstado) Object.entries(evaluarAgentes(d)).forEach(([id, info]) => aplicarAgente(id, info));
+  };
+  if (datosActuales && datosActuales.porEstado) Object.entries(evaluarAgentes(datosActuales)).forEach(([id, info]) => aplicarAgente(id, info));
+
   // state
   const keys = {}; let paused = false, mode = 'intro', dest = [], pendingOpen = null, near = null, hover = null, insideNow = false, disposed = false, flyT = 0;
   const camOffset = new THREE.Vector3();
+  let hoverSec = null; const focoTarget = new THREE.Vector3(), focoPos = new THREE.Vector3(), v3g = new THREE.Vector3(); // ★ hover de secretaría y enfoque de cámara
   const blocked = (x, z, r = 0.42) => {
     if (Math.abs(x) > 42 || Math.abs(z) > 36) return true;
     for (const [a, b, c, d] of walls) if (x > a - r && x < c + r && z > b - r && z < d + r) return true;
@@ -443,17 +470,25 @@ export function createWorld(el, cb = {}) {
     const r = renderer.domElement.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     if (insideNow || interior.visible) { const h = ray.intersectObjects(hits)[0]; if (h && insideNow) return { area: h.object.userData.area, point: h.point }; }
+    if (!insideNow) { const s = secretarias.intersectar(ray); if (s) return s; } // ★ edificios de secretarías → { publicador, point }
     const g = ray.intersectObjects([floor, plaza, sidewalk, ground])[0]; return g ? { point: g.point } : null;
   };
   let downAt = null;
-  const onDown = e => { downAt = [e.clientX, e.clientY]; };
+  const onDown = e => { downAt = [e.clientX, e.clientY]; if (mode === 'enfoque') mode = 'follow'; /* ★ arrastrar suelta el enfoque */ };
   const onUp = e => {
     if (!downAt || paused) return; const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]); downAt = null; if (moved > 6) return;
-    const p = pick(e); if (!p) return; if (mode === 'intro') { mode = 'follow'; controls.autoRotate = false; }
+    const p = pick(e); if (!p) return;
+    if (p.publicador) { if (cb.onSecretaria) cb.onSecretaria(p.publicador); return; } // ★ clic en un edificio de secretaría
+    if (mode === 'intro') { mode = 'follow'; controls.autoRotate = false; }
     if (p.area) return goTo(p.area);
     dest = routeTo(p.point.x, p.point.z); pendingOpen = null; marker.position.set(p.point.x, 0.25, p.point.z); marker.visible = true;
   };
-  const onMove = e => { if (paused) return; const p = pick(e); const h = p && p.area ? p.area : null; if (h !== hover) { hover = h; renderer.domElement.style.cursor = h ? 'pointer' : 'default'; } };
+  const onMove = e => {
+    if (paused) return; const p = pick(e); const h = p && p.area ? p.area : null;
+    const hs = p && p.publicador ? p.publicador : null; if (hs !== hoverSec) { hoverSec = hs; secretarias.hover(hs); } // ★
+    if (h !== hover) hover = h;
+    const cursor = h || hs ? 'pointer' : 'default'; if (renderer.domElement.style.cursor !== cursor) renderer.domElement.style.cursor = cursor;
+  };
   const onKey = (e, v) => {
     const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     const k = e.key.toLowerCase(); if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { keys[k] = v; if (v && !paused) { e.preventDefault(); dest = []; pendingOpen = null; if (mode !== 'follow') { mode = 'follow'; controls.autoRotate = false; } } }
@@ -462,7 +497,7 @@ export function createWorld(el, cb = {}) {
   const kd = e => onKey(e, true), ku = e => onKey(e, false);
   renderer.domElement.addEventListener('pointerdown', onDown); renderer.domElement.addEventListener('pointerup', onUp); renderer.domElement.addEventListener('pointermove', onMove);
   addEventListener('keydown', kd); addEventListener('keyup', ku);
-  const resize = () => { const w = el.clientWidth, h = el.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+  const resize = () => { const w = el.clientWidth, h = el.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (paused) renderer.render(scene, camera); /* ★ con el panel abierto no hay frames: repintar una vez */ };
   const ro = new ResizeObserver(resize); ro.observe(el); resize();
 
   const clock3 = new THREE.Clock(); const v3 = new THREE.Vector3(); let shellY = 0, walkPhase = 0;
@@ -519,9 +554,14 @@ export function createWorld(el, cb = {}) {
         if (side === 0) c.g.position.z += off; if (side === 2) c.g.position.z -= off; if (side === 1) c.g.position.x -= off; if (side === 3) c.g.position.x += off; });
       pulses.forEach(pu => { pu.t = (pu.t + dt * 0.35) % 1; const segs = pu.p, L = [0]; for (let i = 1; i < segs.length; i++) L.push(L[i - 1] + segs[i].distanceTo(segs[i - 1])); const d = pu.t * L[L.length - 1]; let i = 1; while (i < L.length - 1 && L[i] < d) i++; pu.s.position.lerpVectors(segs[i - 1], segs[i], (d - L[i - 1]) / (L[i] - L[i - 1] || 1)); });
       if (marker.visible) marker.scale.setScalar(1 + Math.sin(t * 6) * 0.1);
+      secretarias.animar(t); // ★ latido de las luminarias
     }
     // camera
-    if (mode !== 'intro') {
+    if (mode === 'enfoque') {
+      // ★ enfoque sobre un edificio de secretaría (desde la lista accesible); un clic o arrastre lo suelta
+      const k = Math.min(1, dt * (reduced ? 60 : 3));
+      controls.target.lerp(focoTarget, k); camera.position.lerp(focoPos, k);
+    } else if (mode !== 'intro') {
       const tgt = v3.set(player.position.x, 1.2, player.position.z);
       const delta = tgt.clone().sub(controls.target).multiplyScalar(Math.min(1, dt * 5));
       controls.target.add(delta); camera.position.add(delta);
@@ -531,6 +571,7 @@ export function createWorld(el, cb = {}) {
         camera.position.copy(controls.target).add(camOffset); if (Math.abs(len - want) < 0.5 || flyT > 3) mode = 'follow';
       }
     }
+    if (paused || document.hidden) return; // ★ salto de render: con un panel abierto o la pestaña oculta la GPU descansa (el rAF ya quedó agendado)
     controls.update();
     renderer.render(scene, camera);
     // labels
@@ -538,7 +579,9 @@ export function createWorld(el, cb = {}) {
     const place2d = (d, p, show) => { if (!show) { d.style.display = 'none'; return; } v3.copy(p).project(camera); if (v3.z > 1) { d.style.display = 'none'; return; } d.style.display = ''; d.style.transform = `translate(${(v3.x * 0.5 + 0.5) * w}px,${(-v3.y * 0.5 + 0.5) * h}px) translate(-50%,-100%)`; };
     labels.forEach(l => place2d(l.el, l.p, l.inside ? insideNow : !insideNow && mode !== 'intro'));
     place2d(youL, new THREE.Vector3(player.position.x, 3.4, player.position.z), mode !== 'intro');
-    if (active && insideNow) { const a = AREAS[active], f = agents[active]; bubble.innerHTML = `${a.line}<div style="margin-top:5px;font-size:11.5px;font-weight:700;color:#2563EB">${near === active ? 'Pulsa E o haz clic para entrar' : 'Clic para ir'}</div>`; bubble.style.display = ''; place2d(bubble, new THREE.Vector3(f.position.x, 3.5, f.position.z), true); }
+    // ★ globos de notificación (arriba a la derecha de cada agente; el activo muestra su frase en el diálogo)
+    Object.entries(agents).forEach(([id, f]) => { const g = globos[id]; if (g) place2d(g, v3g.set(f.position.x + 0.62, 3.1, f.position.z), insideNow && id !== active); });
+    if (active && insideNow) { const a = AREAS[active], f = agents[active]; bubble.innerHTML = `${frases[active] || a.line}<div style="margin-top:5px;font-size:11.5px;font-weight:700;color:#2563EB">${near === active ? 'Pulsa E o haz clic para entrar' : 'Clic para ir'}</div>`; bubble.style.display = ''; place2d(bubble, new THREE.Vector3(f.position.x, 3.5, f.position.z), true); } // ★ frase dinámica
     else bubble.style.display = 'none';
   }
   frame(); cb.onReady && cb.onReady();
@@ -548,6 +591,19 @@ export function createWorld(el, cb = {}) {
     setPaused(b) { paused = b; Object.keys(keys).forEach(k => keys[k] = false); },
     openNear() { if (near) cb.onOpen && cb.onOpen(near); },
     exitBuilding() { mode = 'follow'; dest = routeTo(0, 18); pendingOpen = null; },
-    dispose() { disposed = true; ro.disconnect(); removeEventListener('keydown', kd); removeEventListener('keyup', ku); controls.dispose(); renderer.dispose(); el.innerHTML = ''; }
+    // ★ API de datos: el mundo se repinta con cifras nuevas sin reconstruirse
+    setDatos(d) { aplicarDatos(d); },
+    setAgente(id, info) { aplicarAgente(id, info); },
+    /** mueve la cámara hasta el edificio de la secretaría (lista accesible); false si no tiene edificio */
+    enfocarSecretaria(publicador) {
+      const p = secretarias.posicionDe(publicador); if (!p) return false;
+      controls.autoRotate = false; mode = 'enfoque'; focoTarget.copy(p);
+      const dir = v3g.set(-p.x, 0, 20 - p.z); if (dir.lengthSq() < 1) dir.set(0, 0, 1); dir.normalize();
+      focoPos.set(p.x + dir.x * 30, p.y + 17, p.z + dir.z * 30);
+      if (insideNow) { dest = routeTo(0, 18); pendingOpen = null; }
+      return true;
+    },
+    secretariasConEdificio() { return secretarias.items.map(it => it.publicador); },
+    dispose() { disposed = true; ro.disconnect(); removeEventListener('keydown', kd); removeEventListener('keyup', ku); secretarias.dispose(); controls.dispose(); renderer.dispose(); el.innerHTML = ''; }
   };
 }

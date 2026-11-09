@@ -313,6 +313,20 @@ function leerFixtures(): [SiataResponse, SiataResponse] {
 }
 
 /**
+ * Motivo del fallo en palabras propias, sin filtrar `e.message` (texto del runtime en inglés, rutas de zod, etc.)
+ * al snapshot que la API devuelve y la UI pinta.
+ */
+function motivoPropio(e: unknown): string {
+  if (e instanceof Error && e.name === "TimeoutError") return `tiempo de espera agotado (${TIEMPO_MAXIMO_MS / 1000} s)`;
+  if (e instanceof Error) {
+    const http = /HTTP (\d+)/.exec(e.message);
+    if (http) return `HTTP ${http[1]}`;
+  }
+  if (e instanceof z.ZodError || e instanceof SyntaxError) return "respuesta con formato inesperado";
+  return "sin conexión";
+}
+
+/**
  * Última lectura de aire del Valle de Aburrá. Cacheada 5 min (SIATA publica cada ~5 min); nunca lanza:
  * si SIATA falla responde con la copia guardada (`guardado: true`) y se reintenta en 1 min.
  */
@@ -325,7 +339,9 @@ export async function obtenerAire(): Promise<SnapshotSiata> {
     cacheLife({ stale: 60, revalidate: 300, expire: 900 });
     return construirSnapshot(poeca, trafico, consultado, null);
   } catch (e) {
-    const motivo = e instanceof Error ? e.message : String(e);
+    // el detalle técnico se queda en el log del servidor; al cliente solo llega un motivo propio
+    console.error("[siata]", e);
+    const motivo = motivoPropio(e);
     // la copia guardada se reintenta pronto; `expire` ≥ 5 min mantiene la ruta prerenderizable
     cacheLife({ stale: 30, revalidate: 60, expire: 600 });
     try {
@@ -335,7 +351,8 @@ export async function obtenerAire(): Promise<SnapshotSiata> {
         aviso: `SIATA no respondió (${motivo}). Se muestra la copia guardada.`,
       });
     } catch (e2) {
-      return { ok: false, consultado, error: `SIATA no respondió (${motivo}) y la copia guardada no se pudo leer (${String(e2)})` };
+      console.error("[siata] copia guardada ilegible", e2);
+      return { ok: false, consultado, error: "SIATA no respondió y la copia guardada no se pudo leer" };
     }
   }
 }

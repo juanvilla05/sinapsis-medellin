@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResumenCatalogo } from "@/lib/catalogo";
 import { AREAS_MUNDO, areaPorId, decimal, fechaColombia, miles, type IdArea } from "./areas";
 import PanelReloj from "./paneles/PanelReloj";
@@ -8,7 +8,8 @@ import PanelLaboratorio, { type OpcionLab } from "./paneles/PanelLaboratorio";
 import PanelEnConstruccion from "./paneles/PanelEnConstruccion";
 import PanelMonitoreo from "./paneles/PanelMonitoreo";
 import PanelAnalista from "./paneles/PanelAnalista";
-import type { DatosMundo } from "./datos";
+import { colorEstado, type DatosMundo } from "./datos";
+import { evaluarAgente, evaluarAgentes, type AireAgente, type ContextoAgentes, type EstadoVisibleAgente, type IdAgente } from "./agentes";
 
 interface MundoAPI {
   enter(): void;
@@ -16,7 +17,33 @@ interface MundoAPI {
   exitBuilding(): void;
   openNear(): void;
   setPaused(p: boolean): void;
+  /** repinta edificios, videowall y agentes con cifras nuevas */
+  setDatos(d: ContextoAgentes): void;
+  setAgente(id: IdAgente, info: Partial<EstadoVisibleAgente>): void;
+  /** mueve la cámara al edificio de la secretaría; false si no tiene edificio */
+  enfocarSecretaria(publicador: string): boolean;
   dispose(): void;
+}
+
+const isoValido = (v: unknown) => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
+
+/**
+ * Lee del JSON de /api/siata lo que la Operadora necesita: estaciones válidas en Medellín y la frescura del dato
+ * (`guardado`, `lectura`, `capturado`), para no decir «en vivo» cuando es la copia guardada. `null` = sin señal.
+ */
+function aireDe(j: unknown): AireAgente | null {
+  if (!j || typeof j !== "object") return null;
+  const r = j as {
+    ok?: boolean;
+    guardado?: unknown;
+    lectura?: unknown;
+    capturado?: unknown;
+    resumen?: { medellin?: { estacionesValidas?: unknown } };
+  };
+  if (r.ok === false) return null;
+  const n = r.resumen?.medellin?.estacionesValidas;
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  return { validas: n, guardado: r.guardado === true, lectura: isoValido(r.lectura), capturado: isoValido(r.capturado) };
 }
 
 const tarjeta = "rounded-2xl border border-[#E3EAF3] bg-white/95 shadow-[0_8px_24px_rgba(30,58,95,.1)]";
@@ -61,6 +88,12 @@ export default function ExperienciaMundo({
   const [rescatadas, setRescatadas] = useState(0);
   const [menuMovil, setMenuMovil] = useState(false);
   const [reducido, setReducido] = useState(false);
+  // contexto de los agentes: lo que pasa en esta sesión (sin cifras a mano)
+  const [preguntas, setPreguntas] = useState(0);
+  const preguntasRef = useRef(0);
+  const [aire, setAire] = useState<AireAgente | null | undefined>(undefined);
+  const [secretariaElegida, setSecretariaElegida] = useState<string | null>(null);
+  const temporizador = useRef<number | null>(null);
 
   const abrir = useCallback((id: IdArea) => {
     mundo.current?.setPaused(true);
@@ -69,7 +102,21 @@ export default function ExperienciaMundo({
   const cerrar = useCallback(() => {
     mundo.current?.setPaused(false);
     setPanel(null);
+    setSecretariaElegida(null);
   }, []);
+  // clic en un edificio de secretaría: abre el Reloj de Frescura (PanelReloj no recibe publicador inicial; se muestra como pista)
+  const abrirSecretaria = useCallback(
+    (publicador: string) => {
+      setSecretariaElegida(publicador);
+      abrir("reloj");
+    },
+    [abrir],
+  );
+
+  const ctx = useMemo<ContextoAgentes>(() => ({ ...datos, rescatadas, preguntas, aire }), [datos, rescatadas, preguntas, aire]);
+  const agentes = useMemo(() => evaluarAgentes(ctx), [ctx]);
+  const trabajando = Object.values(agentes).filter((a) => a.estado === "trabajando").length;
+  const teNecesitan = Object.values(agentes).filter((a) => a.estado === "te-necesita").length;
 
   // Montaje del mundo 3D (three.js) solo en el navegador
   useEffect(() => {
@@ -91,6 +138,7 @@ export default function ExperienciaMundo({
           fonts: { sans, mono },
           datos: datosRef.current,
           onOpen: (id: IdArea) => abrir(id),
+          onSecretaria: (publicador: string) => abrirSecretaria(publicador),
           onNear: (id: IdArea | null) => setCerca(id),
           onInside: (b: boolean) => setAdentro(b),
           onReady: () => setListo(true),
@@ -102,10 +150,44 @@ export default function ExperienciaMundo({
     })();
     return () => {
       cancelado = true;
+      if (temporizador.current) clearTimeout(temporizador.current);
       mundo.current?.dispose();
       mundo.current = null;
     };
-  }, [abrir]);
+  }, [abrir, abrirSecretaria]);
+
+  // El mundo se repinta (edificios, videowall, globos) cada vez que cambia el contexto de la sesión
+  useEffect(() => {
+    if (listo) mundo.current?.setDatos(ctx);
+  }, [listo, ctx]);
+
+  // Operadora de la Sala de Monitoreo: estaciones SIATA válidas en Medellín y frescura del dato desde /api/siata.
+  // Si la ruta no existe o no responde, queda "sin señal" sin lanzar error; si llega la copia guardada, lo dice.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    (async () => {
+      let a: AireAgente | null = null;
+      try {
+        // 10 s propios: si la ruta cuelga (instancia fría, red del auditorio) la Operadora pasa a "sin señal".
+        const r = await fetch("/api/siata", { cache: "no-store", signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(10_000)]) });
+        if (r.ok && (r.headers.get("content-type") ?? "").includes("json")) a = aireDe(await r.json());
+      } catch {
+        a = null;
+      }
+      if (ctrl.signal.aborted) return;
+      setAire(a);
+      mundo.current?.setAgente("monitoreo", evaluarAgente("monitoreo", { ...datosRef.current, aire: a }));
+    })();
+    return () => ctrl.abort();
+  }, []);
+
+  // Analista: PanelAnalista llama `onRespuesta` por cada respuesta terminada (chat o modo directo); contrato tipado por prop.
+  const onPregunta = useCallback(() => {
+    const n = preguntasRef.current + 1;
+    preguntasRef.current = n;
+    setPreguntas(n);
+    mundo.current?.setAgente("analista", evaluarAgente("analista", { ...datosRef.current, preguntas: n }));
+  }, []);
 
   // Esc cierra el panel; el foco va al botón de volver al abrirlo
   useEffect(() => {
@@ -120,12 +202,22 @@ export default function ExperienciaMundo({
   const atrasados = resumen.porEstado.atrasado + resumen.porEstado.critico;
   const areaCerca = areaPorId(cerca);
   const areaPanel = areaPorId(panel);
-  const estado = adentro ? `${AREAS_MUNDO.length} agentes trabajando · ${areaCerca?.nombre ?? "Recepción"}` : "Plaza de La Alpujarra";
+  const estado = adentro
+    ? `${trabajando} ${trabajando === 1 ? "agente trabajando" : "agentes trabajando"}${teNecesitan ? ` · ${teNecesitan} te ${teNecesitan === 1 ? "necesita" : "necesitan"}` : ""} · ${areaCerca?.nombre ?? "Recepción"}`
+    : "Plaza de La Alpujarra";
 
   const irA = (id: IdArea) => {
     setEmpezo(true);
     setMenuMovil(false);
     mundo.current?.goTo(id);
+  };
+  // lista accesible de secretarías: enfoca la cámara en el edificio y abre el Reloj
+  const irASecretaria = (publicador: string) => {
+    setEmpezo(true);
+    setMenuMovil(false);
+    const enfocado = mundo.current?.enfocarSecretaria(publicador) ?? false;
+    if (temporizador.current) clearTimeout(temporizador.current);
+    temporizador.current = window.setTimeout(() => abrirSecretaria(publicador), enfocado && !reducido ? 650 : 0);
   };
 
   return (
@@ -218,7 +310,7 @@ export default function ExperienciaMundo({
             </button>
             <nav
               aria-label="Despachos"
-              className={`${tarjeta} absolute left-4 top-24 flex w-[216px] flex-col gap-0.5 p-2.5 max-sm:top-36 ${menuMovil ? "" : "max-sm:hidden"}`}
+              className={`${tarjeta} absolute left-4 top-24 flex max-h-[calc(100dvh-170px)] w-[216px] flex-col gap-0.5 overflow-y-auto p-2.5 max-sm:top-36 max-sm:max-h-[calc(100dvh-300px)] ${menuMovil ? "" : "max-sm:hidden"}`}
             >
               <span className="px-2 pb-1.5 pt-1 text-[11px] font-bold tracking-[.06em] text-[#475569]">DESPACHOS</span>
               {AREAS_MUNDO.map((a) => (
@@ -232,6 +324,31 @@ export default function ExperienciaMundo({
                   {a.enConstruccion && <span className="text-[10px] text-[#64748B]">pronto</span>}
                 </button>
               ))}
+              {datos.secretarias.length > 0 && (
+                <>
+                  <div className="mx-1 my-1.5 h-px bg-[#E3EAF3]" />
+                  <span className="px-2 pb-1 pt-0.5 text-[11px] font-bold tracking-[.06em] text-[#475569]">SECRETARÍAS</span>
+                  <ul className="flex flex-col gap-px" aria-label="Secretarías con edificio en la plaza">
+                    {datos.secretarias.map((s) => (
+                      <li key={s.publicador}>
+                        <button
+                          onClick={() => irASecretaria(s.publicador)}
+                          aria-label={`${s.publicador}: ${miles(s.atrasados)} de ${miles(s.total)} conjuntos atrasados. Ver el edificio y abrir el Reloj de Frescura`}
+                          className="flex w-full items-start gap-2 rounded-[10px] px-2 py-1.5 text-left hover:bg-[#EFF6FF]"
+                        >
+                          <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: colorEstado(s.pct) }} aria-hidden="true" />
+                          <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                            <span className="truncate text-[12.5px] font-semibold text-[#1E3A5F]">{s.publicador}</span>
+                            <span className="font-mono text-[10.5px] text-[#475569]">
+                              {miles(s.atrasados)} de {miles(s.total)} atrasados
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
               <div className="mx-1 my-1.5 h-px bg-[#E3EAF3]" />
               <button
                 onClick={() => (adentro ? mundo.current?.exitBuilding() : mundo.current?.enter())}
@@ -319,6 +436,11 @@ export default function ExperienciaMundo({
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="text-[19px] font-extrabold text-[#1E3A5F]">{areaPanel.nombre}</span>
                 <span className="text-[12.5px] text-[#475569]">{areaPanel.rol}</span>
+                {areaPanel.id === "reloj" && secretariaElegida && (
+                  <span className="mt-1 w-fit rounded-full border border-[#E3EAF3] bg-[#F4F7FB] px-2.5 py-0.5 text-[11.5px] font-semibold text-[#1E3A5F]">
+                    Secretaría elegida: {secretariaElegida} · escríbela en el buscador para filtrar
+                  </span>
+                )}
               </div>
               <button
                 ref={cerrarRef}
@@ -330,10 +452,18 @@ export default function ExperienciaMundo({
             </div>
             {areaPanel.id === "reloj" && <PanelReloj resumenInicial={resumen} />}
             {areaPanel.id === "lab" && (
-              <PanelLaboratorio opciones={opcionesLab} reducido={reducido} onRescate={(n) => setRescatadas((r) => r + n)} />
+              <PanelLaboratorio
+                opciones={opcionesLab}
+                reducido={reducido}
+                onRescate={(n) => {
+                  const total = rescatadas + n;
+                  setRescatadas(total);
+                  mundo.current?.setAgente("lab", evaluarAgente("lab", { ...datosRef.current, rescatadas: total }));
+                }}
+              />
             )}
             {areaPanel.id === "monitoreo" && <PanelMonitoreo datos={datos} modo="modal" />}
-            {areaPanel.id === "analista" && <PanelAnalista modo="modal" />}
+            {areaPanel.id === "analista" && <PanelAnalista modo="modal" onRespuesta={onPregunta} />}
             {areaPanel.id === "ventanilla" && <PanelEnConstruccion area={areaPanel} />}
           </div>
         </div>

@@ -26,16 +26,23 @@ Coordenada válida = número finito dentro de la caja 5,9° < lat < 6,6° y −7
 - **Rejillas**: las celdas con n < 5 se **eliminan**. Dentro de una celda publicada, los sub-conteos
   (condición, heridos/muertos) entre 1 y 4 van como `null`.
 - **Tablas**: cualquier conteo entre 1 y 4 va como `null`; las combinaciones sin casos no aparecen.
+- **Supresión complementaria**: un `null` aislado dentro de un grupo cuyo total se conoce se recuperaría
+  exacto restando. Por eso, si en un grupo queda **exactamente un** `null`, se anula también el menor valor
+  publicado > 0 del grupo. Grupos: las condiciones de una celda (suman `n`); heridos + muertos (suman `n`,
+  en celdas y en la tabla por comuna); las filas de una comuna en cada tabla de incidentes (ambas tablas
+  suman lo mismo por comuna); las modalidades de hurto de una comuna-año (el consolidado 303 publica el
+  total). Se cuentan en `supresion.*.secundarias`. Quedan 10 comunas-año de corregimientos con una sola
+  modalidad en `null`: su total es el que publica el propio consolidado 303 de la Alcaldía.
 - `cargar.ts` rechaza el archivo completo si encuentra un conteo entre 1 y 4 (`.refine` en `esquemas.ts`).
 
 | Archivo | Contenido | Celdas/filas totales | Suprimidas |
 |---|---|---|---|
 | `rejilla-incidentes.json` (50 KB) | rejilla 250 m, incidentes | 1.929 celdas | 259 celdas eliminadas (quedan 1.670) |
-| `rejilla-victimas.json` (187 KB) | rejilla 250 m, víctimas con `peaton`/`motociclista`/`ciclista`/`otro` y `heridos`/`muertos` | 1.923 celdas | 252 celdas eliminadas (quedan 1.671) |
+| `rejilla-victimas.json` (187 KB) | rejilla 250 m, víctimas con `peaton`/`motociclista`/`ciclista`/`otro` y `heridos`/`muertos` | 1.923 celdas | 252 celdas eliminadas (quedan 1.671); 1.349 sub-conteos anulados por supresión complementaria |
 | `rejilla-hurto.json` (56 KB) | rejilla 250 m, hurtos a persona | 2.547 celdas | 665 celdas eliminadas (quedan 1.882) |
-| `incidentes-comuna.json` (33 KB) | `comunaAnioGravedad` (c, a, g, n) · `comunaHora` (c, h, n) | 425 · 492 filas | 50 · 12 con `n: null` |
-| `victimas-comuna.json` (49 KB) | `comunaAnioCondicion` (c, a, cond, n, heridos, muertos) · `muertosPorAnio` (a, n; serie MEData 2014–2021) | 651 · 8 filas | 33 · 0 |
-| `hurto-comuna.json` (133 KB) | `comunaAnioModalidad` (c, a, m, n) · `diaSemanaHora` (d, h, n) | 2.997 · 168 filas | 800 · 0 |
+| `incidentes-comuna.json` (33 KB) | `comunaAnioGravedad` (c, a, g, n) · `comunaHora` (c, h, n) | 425 · 492 filas | 53 · 12 con `n: null` (3 complementarias) |
+| `victimas-comuna.json` (49 KB) | `comunaAnioCondicion` (c, a, cond, n, heridos, muertos) · `muertosPorAnio` (a, n; serie MEData 2014–2021) | 651 · 8 filas | 33 · 0 (+267 filas con heridos/muertos anulados en pareja) |
+| `hurto-comuna.json` (133 KB) | `comunaAnioModalidad` (c, a, m, n) · `diaSemanaHora` (d, h, n) | 2.997 · 168 filas | 877 · 0 (77 complementarias) |
 
 Total de la carpeta: ≈ 508 KB (+ 212 KB de `../fixtures/`), por debajo de 1,5 MB.
 
