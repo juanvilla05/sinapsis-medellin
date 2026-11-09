@@ -40,7 +40,7 @@ export const AREAS_MUNDO: AreaMundo[] = [
     num: "05",
     nombre: "Sala de Monitoreo",
     rol: "Operador",
-    enConstruccion: true,
+    enConstruccion: false,
     descripcion:
       "Seguridad vial y seguridad para moverse por barrio, sobre el mapa de Medellín por comunas, con datos limpios.",
     bloques: ["Mapa por comunas", "Seguridad vial", "Moverse por barrio"],
