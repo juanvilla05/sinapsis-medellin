@@ -1,4 +1,4 @@
-/** Despachos del mundo 3D. Los id coinciden con AREAS de world3d.js. */
+/** Despachos de la Agencia de datos (oficina 2D). */
 export type IdArea = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo";
 
 export interface AreaMundo {
@@ -21,10 +21,9 @@ export const AREAS_MUNDO: AreaMundo[] = [
     num: "03",
     nombre: "Ventanilla de Apertura",
     rol: "Funcionario de ventanilla",
-    enConstruccion: true,
-    descripcion:
-      "Tarjetas de propuesta de mejora por conjunto: el campo, el problema, la cifra y la pregunta que permitiría responder.",
-    bloques: ["Tarjeta de propuesta", "Tarjeta de propuesta", "Tarjeta de propuesta"],
+    enConstruccion: false,
+    ruta2d: "/ventanilla",
+    descripcion: "Propuestas de mejora por conjunto: el problema, la cifra y la acción concreta para la secretaría.",
   },
   {
     id: "analista",

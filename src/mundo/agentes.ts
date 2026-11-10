@@ -101,9 +101,10 @@ export const AGENTES: Record<IdAgente, Agente> = {
     frase: (d) =>
       d.propuestas == null
         ? `Las propuestas de mejora para cada conjunto están en preparación.`
-        : `Tengo ${miles(d.propuestas)} ${plural(d.propuestas, "propuesta", "propuestas")} de mejora para que cada conjunto responda preguntas reales.`,
+        : `Tengo ${miles(d.propuestas)} ${plural(d.propuestas, "conjunto", "conjuntos")} de MEData con propuestas de mejora: qué actualizar, qué documentar y qué publicar, secretaría por secretaría.`,
     cifra: (d) => (d.propuestas == null ? "…" : miles(d.propuestas)),
-    estado: (d) => (d.propuestas == null ? "esperando" : "trabajando"),
+    // la Ventanilla es la bandeja de acciones: si hay propuestas pendientes, te necesita
+    estado: (d) => (d.propuestas == null ? "esperando" : d.propuestas > 0 ? "te-necesita" : "trabajando"),
   },
   analista: {
     nombre: "Analista",
@@ -140,7 +141,7 @@ export const AGENTES: Record<IdAgente, Agente> = {
     nombre: "Guía",
     rol: "Recepción",
     frase: (d) =>
-      `Bienvenido a SINAPSIS. El ${decimal(d.pctAtrasados)} % de los ${miles(d.evaluables)} conjuntos de MEData con periodicidad declarada está atrasado; cada despacho te muestra una parte del problema.`,
+      `Bienvenido a la Agencia de datos de PULSO. El ${decimal(d.pctAtrasados)} % de los ${miles(d.evaluables)} conjuntos de MEData con periodicidad declarada está atrasado; cada despacho te muestra una parte del problema.`,
     cifra: (d) => `${decimal(d.pctAtrasados)} %`,
     estado: () => "trabajando",
   },

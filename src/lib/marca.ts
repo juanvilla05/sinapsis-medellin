@@ -1,8 +1,8 @@
 /** Identidad del proyecto: cambiar aquí el nombre lo cambia en toda la app. */
 export const MARCA = {
-  nombre: "PULSO Medellín",
-  subtitulo: "La ciudad en vivo, con datos abiertos",
-  lema: "Conectamos los datos de la ciudad como neuronas de un mismo cerebro.",
+  nombre: "PULSO",
+  subtitulo: "Medellín en vivo",
+  lema: "Los datos abiertos de Medellín, auditados, limpios y en vivo.",
   equipo: ["Isabela Zuluaga", "Juan Camilo Villa"],
   institucion: "Institución Universitaria ITM",
   evento: "Hackathon de Datos ITM 2026",

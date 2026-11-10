@@ -1,4 +1,4 @@
-/** Los despachos (herramientas) del edificio SINAPSIS. */
+/** Los despachos (herramientas) de la Agencia de datos de PULSO. */
 export interface Despacho {
   id: string;
   nombre: string;
@@ -42,7 +42,7 @@ export const DESPACHOS: Despacho[] = [
     corto: "Ventanilla",
     descripcion: "Propuestas concretas de mejora para cada conjunto: qué campo, qué problema y qué pregunta se podría responder.",
     ruta: "/ventanilla",
-    listo: false,
+    listo: true,
     x: 860,
     y: 400,
     color: "#a78bfa",
@@ -62,7 +62,7 @@ export const DESPACHOS: Despacho[] = [
     id: "monitoreo",
     nombre: "Sala de Monitoreo · PULSO",
     corto: "Monitoreo",
-    descripcion: "PULSO · la ciudad en vivo: el aire de SIATA estación por estación; seguridad vial y hurto por comuna en preparación.",
+    descripcion: "El aire de SIATA estación por estación, la brecha de muertes viales entre MEData y la Policía, y hurto e incidentes por comuna.",
     ruta: "/monitoreo",
     listo: true,
     x: 1352,
