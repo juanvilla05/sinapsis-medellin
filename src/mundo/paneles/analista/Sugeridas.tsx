@@ -28,7 +28,7 @@ function Lista({
             disabled={deshabilitado}
             className={
               oscuro
-                ? "w-full rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2.5 text-left text-[13px] font-semibold leading-snug text-white hover:border-[#60A5FA] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-60"
+                ? "w-full rounded-xl border border-tinta/15 bg-tinta/[0.06] px-3 py-2.5 text-left text-[13px] font-semibold leading-snug text-tinta hover:border-[#60A5FA] hover:bg-tinta/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#60A5FA] disabled:cursor-not-allowed disabled:opacity-60"
                 : "w-full rounded-xl border border-[#E3EAF3] bg-white px-3 py-2.5 text-left text-[13px] font-semibold leading-snug text-[#1E3A5F] hover:border-[#2563EB] hover:bg-[#EFF6FF] disabled:cursor-not-allowed disabled:opacity-60"
             }
           >
@@ -60,7 +60,7 @@ export default function Sugeridas({
   /** con `extra`: también pliega las preguntas propias (cuando ya hay conversación) */
   plegadas?: boolean;
 }) {
-  const titulo = oscuro ? "text-[12px] font-bold text-white/70" : "text-[12px] font-bold text-[#475569]";
+  const titulo = oscuro ? "text-[12px] font-bold text-tinta/70" : "text-[12px] font-bold text-[#475569]";
 
   if (!extra || extra.length === 0) {
     return (
@@ -74,7 +74,7 @@ export default function Sugeridas({
   const destacadas = SUGERIDAS.filter((s) => DESTACADAS_FLOTANTE.includes(s.herramienta as string));
   const propias = [...destacadas, ...extra.filter((e) => !destacadas.some((d) => d.texto === e.texto))];
   const resto = SUGERIDAS.filter((s) => !propias.some((p) => p.texto === s.texto));
-  const resumen = `cursor-pointer select-none rounded-lg py-1 ${titulo} ${oscuro ? "hover:text-white focus-visible:outline-[#60A5FA]" : "hover:text-[#1E3A5F] focus-visible:outline-[#2563EB]"} focus-visible:outline-2 focus-visible:outline-offset-2`;
+  const resumen = `cursor-pointer select-none rounded-lg py-1 ${titulo} ${oscuro ? "hover:text-tinta focus-visible:outline-[#60A5FA]" : "hover:text-[#1E3A5F] focus-visible:outline-[#2563EB]"} focus-visible:outline-2 focus-visible:outline-offset-2`;
 
   return (
     <div className="flex flex-col gap-3">

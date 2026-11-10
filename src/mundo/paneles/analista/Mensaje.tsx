@@ -20,7 +20,7 @@ export function Burbuja({ rol, children, oscuro = false }: { rol: "user" | "assi
     <div className={`flex ${usuario ? "justify-end" : "justify-start"}`}>
       <div
         className={`flex max-w-[min(100%,46rem)] flex-col gap-2.5 ${
-          usuario ? `rounded-2xl rounded-br-md ${oscuro ? "bg-[#2563EB]" : "bg-[#1E3A5F]"} px-4 py-2.5 text-white` : "w-full"
+          usuario ? `rounded-2xl rounded-br-md ${oscuro ? "bg-[#2563EB]" : "bg-[#1E3A5F]"} px-4 py-2.5 text-tinta` : "w-full"
         }`}
       >
         {children}
@@ -33,7 +33,7 @@ export function Consultando({ nombre, oscuro = false }: { nombre: string; oscuro
   return (
     <div
       className={`flex items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-[13px] ${
-        oscuro ? "border-white/10 bg-white/5 text-white/75" : "border-[#E3EAF3] bg-[#F4F7FB] text-[#475569]"
+        oscuro ? "border-tinta/10 bg-tinta/5 text-tinta/75" : "border-[#E3EAF3] bg-[#F4F7FB] text-[#475569]"
       }`}
     >
       <span className={`h-2.5 w-2.5 animate-pulse rounded-full motion-reduce:animate-none ${oscuro ? "bg-[#60A5FA]" : "bg-[#2563EB]"}`} aria-hidden="true" />
@@ -61,7 +61,7 @@ export default function Mensaje({
     if (part.type === "text") {
       if (!part.text.trim()) return null;
       return (
-        <p key={i} className={`m-0 whitespace-pre-wrap text-[14px] leading-relaxed ${rol === "user" || oscuro ? "text-white" : "text-[#0F172A]"}`}>
+        <p key={i} className={`m-0 whitespace-pre-wrap text-[14px] leading-relaxed ${rol === "user" || oscuro ? "text-tinta" : "text-[#0F172A]"}`}>
           {part.text}
         </p>
       );

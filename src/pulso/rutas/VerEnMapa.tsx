@@ -10,7 +10,7 @@ export default function VerEnMapa({ rutas, origen, destino }: { rutas: RutaPulso
     <button
       type="button"
       onClick={() => emitir({ tipo: "rutas", rutas, origen, destino, elegida })}
-      className="self-start rounded-xl bg-[#1E3A5F] px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-[#2563EB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+      className="self-start rounded-xl bg-[#1E3A5F] px-3.5 py-2 text-[13px] font-semibold text-tinta hover:bg-[#2563EB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
     >
       Ver en el mapa
     </button>
