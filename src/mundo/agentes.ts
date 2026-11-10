@@ -140,7 +140,7 @@ export const AGENTES: Record<IdAgente, Agente> = {
     nombre: "Guía",
     rol: "Recepción",
     frase: (d) =>
-      `Bienvenido a SINAPSIS. El ${decimal(d.pctAtrasados)} % de los ${miles(d.evaluables)} conjuntos de MEData con periodicidad declarada está atrasado; cada despacho te muestra una parte del problema.`,
+      `Bienvenido a la Agencia de datos de PULSO. El ${decimal(d.pctAtrasados)} % de los ${miles(d.evaluables)} conjuntos de MEData con periodicidad declarada está atrasado; cada despacho te muestra una parte del problema.`,
     cifra: (d) => `${decimal(d.pctAtrasados)} %`,
     estado: () => "trabajando",
   },

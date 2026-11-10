@@ -19,7 +19,7 @@ export interface PropsPanelAnalista {
   modo?: ModoPanel;
   /**
    * Contrato con el mundo 3D: se llama una vez por cada respuesta terminada (chat `onFinish` y cada
-   * consulta directa que pasa a `listo`). ExperienciaMundo cuenta con esto las preguntas del Analista.
+   * consulta directa que pasa a `listo`). La Agencia cuenta con esto las preguntas del Analista.
    */
   onRespuesta?: () => void;
   /**

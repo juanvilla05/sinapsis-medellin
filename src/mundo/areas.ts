@@ -1,4 +1,4 @@
-/** Despachos del mundo 3D. Los id coinciden con AREAS de world3d.js. */
+/** Despachos de la Agencia de datos (oficina 2D). */
 export type IdArea = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo";
 
 export interface AreaMundo {
