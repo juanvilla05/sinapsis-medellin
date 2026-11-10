@@ -6,7 +6,7 @@ Proyecto de la **Hackathon de Datos ITM 2026** · Isabela Zuluaga y Juan Camilo 
 
 > Propuesta académica presentada a la Alcaldía de Medellín. No es un sitio oficial de la Alcaldía.
 
-En línea: **https://sinapsis-pulso.vercel.app** · Repositorio de entrega: [juanvilla05/sinapsis-medellin](https://github.com/juanvilla05/sinapsis-medellin), fork del repositorio original del equipo [zuluagaisabela/sinapsis-medellin](https://github.com/zuluagaisabela/sinapsis-medellin).
+En línea: **https://pulsomedellin.com** · Repositorio de entrega: [juanvilla05/sinapsis-medellin](https://github.com/juanvilla05/sinapsis-medellin), fork del repositorio original del equipo [zuluagaisabela/sinapsis-medellin](https://github.com/zuluagaisabela/sinapsis-medellin).
 
 ## Hallazgo principal
 
@@ -38,7 +38,7 @@ La vista de calidad de los datos es un **mundo 3D** de La Alpujarra (three.js): 
 
 ## Ejecutar en local
 
-Versión en línea: **https://sinapsis-pulso.vercel.app**. Los pasos que sigue el jurado están en [`instrucciones.txt`](instrucciones.txt).
+Versión en línea: **https://pulsomedellin.com**. Los pasos que sigue el jurado están en [`instrucciones.txt`](instrucciones.txt).
 
 Requisitos: **Node.js 20 o superior** (probado con Node 24.15) y conexión a internet (la app consulta MEData, SIATA y datos.gov.co). No hace falta ninguna clave; para el chat con Gemini, copiar `.env.example` a `.env.local`.
 
