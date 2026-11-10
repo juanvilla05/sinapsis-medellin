@@ -104,7 +104,7 @@ body {
 .escena .despacho:focus-visible circle {
   stroke: #fff;
 }
-.sinapsis-linea {
+.pulso-linea {
   animation: flujo 1.6s linear infinite;
 }
 @keyframes flujo {
@@ -135,7 +135,7 @@ body {
   .bandera-ondea {
     animation: none;
   }
-  .sinapsis-linea {
+  .pulso-linea {
     animation: none;
   }
   .escena animate,
@@ -149,4 +149,159 @@ body {
   background: linear-gradient(180deg, var(--panel-2), var(--panel));
   border: 1px solid var(--borde);
   border-radius: 1.25rem;
+}
+
+/* ───── Agencia de datos (oficina isométrica 2D) ───── */
+.sala {
+  cursor: pointer;
+  outline: none;
+}
+.sala .alfombra {
+  transition: stroke 0.2s, stroke-width 0.2s, filter 0.2s;
+}
+.sala:hover .alfombra,
+.sala:focus-visible .alfombra,
+.sala-activa .alfombra {
+  stroke: #2563eb;
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 6px rgba(37, 99, 235, 0.35));
+}
+.salida-pulso {
+  cursor: pointer;
+}
+.salida-pulso:hover polygon,
+.salida-pulso:focus-visible polygon {
+  filter: brightness(1.15);
+}
+.agente-respira {
+  animation: respira 3.2s ease-in-out infinite;
+}
+@keyframes respira {
+  50% {
+    transform: translateY(-1.2px);
+  }
+}
+.agente-saluda {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: saluda 2.4s ease-in-out infinite;
+}
+@keyframes saluda {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  70%,
+  90% {
+    transform: rotate(-14deg);
+  }
+  80% {
+    transform: rotate(10deg);
+  }
+}
+.planta-mece {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mece 6s ease-in-out infinite;
+}
+@keyframes mece {
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+.globo-flota {
+  animation: flota 3s ease-in-out infinite;
+}
+@keyframes flota {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.globo-late {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: late 1.8s ease-out infinite;
+}
+@keyframes late {
+  from {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  to {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+.faro-late {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: late 2.4s ease-out infinite;
+}
+.led-parpadea {
+  animation: led 1.4s steps(2, jump-none) infinite;
+}
+.led-parpadea-lento {
+  animation: led 2.6s steps(2, jump-none) infinite;
+}
+@keyframes led {
+  50% {
+    opacity: 0.25;
+  }
+}
+.manecilla-min,
+.manecilla-hora {
+  transform-box: view-box;
+}
+
+/* Etiquetas de la maqueta 3D (CSS2DRenderer) */
+.etiqueta-3d {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: translateY(-4px);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  white-space: nowrap;
+}
+.etiqueta-3d-nombre {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+.etiqueta-3d-cifra {
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+}
+.etiqueta-3d-late {
+  animation: etiqueta-late 1.8s ease-out infinite;
+}
+@keyframes etiqueta-late {
+  0% {
+    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(185, 28, 28, 0);
+  }
+}
+.maqueta-3d {
+  container-type: inline-size;
+}
+@container (max-width: 560px) {
+  .etiqueta-3d-nombre {
+    display: none;
+  }
+  .etiqueta-3d-cifra {
+    padding: 2px 7px;
+    font-size: 10.5px;
+  }
 }

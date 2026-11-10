@@ -1,6 +1,6 @@
-# SINAPSIS · Centro de Inteligencia de Datos de Medellín
+# PULSO · Medellín en vivo
 
-Agentes que auditan, limpian y explican **en vivo** los datos abiertos de [MEData](https://medata.app.medellin.gov.co/), el portal de datos abiertos de la Alcaldía de Medellín.
+Una sola herramienta con dos ramas: **la Ciudad**, un mapa en vivo con los datos ya limpios e integrados, y **la Agencia de datos**, la oficina donde agentes auditan, limpian y explican los datos crudos de [MEData](https://medata.app.medellin.gov.co/), el portal de datos abiertos de la Alcaldía de Medellín.
 
 Proyecto de la **Hackathon de Datos ITM 2026** · Isabela Zuluaga y Juan Camilo Villa · Institución Universitaria ITM.
 
@@ -10,31 +10,32 @@ En línea: **https://pulsomedellin.com** · Repositorio de entrega: [juanvilla05
 
 ## Hallazgo principal
 
-**El 92,6 % de los conjuntos de MEData con periodicidad declarada lleva más de 1,5 veces ese plazo sin actualizarse** (313 de 338, según la fecha de modificación que publica el propio catálogo, consultado el 8 de noviembre de 2026).
+**El 92,6 % de los conjuntos de MEData con periodicidad declarada lleva más de 1,5 veces ese plazo sin actualizarse** (313 de 338, según la fecha de modificación que publica el propio catálogo, consultado el 10 de noviembre de 2026).
 
-## PULSO · Medellín en vivo (`/`)
+## La Ciudad · PULSO en vivo (`/`)
 
 La portada es un **mapa 3D de Medellín** (MapLibre + deck.gl sobre OpenFreeMap, sin claves): faros de SIATA con el PM2.5 en vivo, columnas de 250 m de incidentes, víctimas y hurto de MEData, y comunas oficiales. Encima flotan:
 
 - **Rutas inteligentes**: Google Routes calcula las alternativas y PULSO las compara por aire (SIATA) y siniestralidad histórica (MEData).
 - **PulsoBot**: el Analista con voz, disponible 24/7; responde citando la fuente y mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta).
 
-## La Alpujarra 3D (`/alpujarra`)
+## La Agencia de datos (`/alpujarra`)
 
-La vista de calidad de los datos es un **mundo 3D** de La Alpujarra (three.js): se camina con WASD o con clic en el piso, se entra al edificio SINAPSIS y en la oficina cada agente atiende su despacho. Al acercarse a un despacho (tecla **E**) se abre su herramienta con datos reales de MEData. El menú "Despachos" permite hacer todo con el teclado, sin usar el 3D.
+La oficina detrás del mapa: una **vista isométrica 2D** (SVG, sin WebGL) que se entiende de un vistazo, sin caminar. Al fondo está el **Archivo MEData** con los datos crudos; una línea animada los lleva por los despachos hasta la **Salida a PULSO**, que abre el mapa de la ciudad. Cada agente tiene su puesto, su nombre y su cifra real con el color de su estado (trabajando, esperando, te necesita, sin señal). Tocar un despacho, en la oficina, en la barra lateral o en la ficha del equipo, abre su herramienta.
 
-- Diseño: handoff de Claude Design (`docs/diseno-mundo-3d.md`), portado a `src/mundo/`.
-- Panel ejecutivo sin 3D: `/panel`, `/frescura`, `/laboratorio`.
+- Arriba, cuatro cifras reales: % de conjuntos atrasados, conjuntos auditados, conjuntos críticos y estaciones de SIATA reportando.
+- Funciona en celular, tablet y computador; con teclado, cada sala es un botón (Tab + Enter).
+- Panel ejecutivo sin animación: `/panel`, `/frescura`, `/laboratorio`, `/ventanilla`.
 
 ## Despachos
 
 | Despacho | Estado | Qué hace |
 |---|---|---|
-| Reloj de Frescura (mundo 3D y `/frescura`) | ✅ | Audita los 433 conjuntos del catálogo y compara la periodicidad prometida con la última modificación; ranking por secretaría; consulta en vivo |
-| Laboratorio de Limpieza (mundo 3D y `/laboratorio`) | ✅ | Descarga en vivo el inicio y el final de un archivo de MEData (HTTP Range), detecta la codificación, perfila columnas, aplica reglas de limpieza y muestra el antes y el después |
-| Ventanilla de Apertura | 🚧 | Propuestas de mejora por conjunto |
-| Analista IA (mundo 3D y `/analista`) | ✅ | Preguntas en español; cada cifra sale de una herramienta determinista y se cita con conjunto, campo, licencia y fecha de corte. Con clave usa Gemini; sin clave responde en modo directo |
-| Sala de Monitoreo · PULSO (mundo 3D y `/monitoreo`) | ✅ | Aire en vivo de SIATA (ICA, Resolución 2254 de 2017), brecha de muertes viales MEData vs Policía, y hurto e incidentes por comuna en tabla, mapa y Medellín 3D |
+| Reloj de Frescura (Agencia y `/frescura`) | ✅ | Audita los 433 conjuntos del catálogo y compara la periodicidad prometida con la última modificación; ranking por secretaría; consulta en vivo |
+| Laboratorio de Limpieza (Agencia y `/laboratorio`) | ✅ | Descarga en vivo el inicio y el final de un archivo de MEData (HTTP Range), detecta la codificación, perfila columnas, aplica reglas de limpieza y muestra el antes y el después |
+| Ventanilla de Apertura (Agencia y `/ventanilla`) | ✅ | Una propuesta por conjunto con problemas (428 de 433): actualizarlo, declarar su periodicidad, publicar los datos detrás de un tablero, documentar sus columnas o ampliar su descripción; prioridad alta, media o baja, filtro por secretaría y descarga en CSV. Reglas deterministas en `src/lib/ventanilla.ts` |
+| Analista IA · PulsoBot (Agencia y `/analista`) | ✅ | Preguntas en español; cada cifra sale de una herramienta determinista y se cita con conjunto, campo, licencia y fecha de corte. Con clave usa Gemini; sin clave responde en modo directo |
+| Sala de Monitoreo (Agencia y `/monitoreo`) | ✅ | Aire en vivo de SIATA (ICA, Resolución 2254 de 2017), brecha de muertes viales MEData vs Policía, y hurto e incidentes por comuna en tabla, mapa y Medellín 3D |
 
 ## Ejecutar en local
 
@@ -71,8 +72,10 @@ src/lib/calidad.ts       motor de diagnóstico y limpieza (compartido por el pip
 src/lib/catalogo.ts      lectura y auditoría del catálogo DKAN de MEData
 src/lib/laboratorio.ts   descarga parcial (inicio + final) y análisis en vivo
 src/app/api/*            endpoints en vivo (catálogo y laboratorio) y respaldo guardado
-src/mundo/world3d.js     mundo 3D (three.js r160)
-src/mundo/*.tsx          HUD, paneles y conexión con las API
+src/lib/ventanilla.ts    reglas de la Ventanilla de Apertura (propuestas por conjunto)
+src/agencia/             Agencia de datos: oficina isométrica 2D, personajes y barra lateral
+src/mundo/paneles/       herramientas de cada despacho (Reloj, Laboratorio, Ventanilla, Analista, Monitoreo)
+src/pulso/               la Ciudad: mapa en vivo, rutas y PulsoBot
 scripts/pipeline.ts      pipeline automático
 src/data/                resultados guardados del pipeline
 ```
@@ -88,7 +91,7 @@ src/data/                resultados guardados del pipeline
 
 ## Uso de IA
 
-Se usó Claude (Anthropic) como asistente de programación para escribir y depurar el código, y Claude Design para el diseño visual del mundo 3D. El equipo revisó y puede explicar cada componente.
+Se usó Claude (Anthropic) como asistente de programación para escribir y depurar el código y para diseñar la oficina isométrica de la Agencia de datos. El equipo revisó y puede explicar cada componente.
 
 Dentro de la aplicación, el Analista puede usar Gemini 2.5 Flash (Google) si hay clave: interpreta la pregunta y elige una herramienta, pero no genera cifras; todas salen de funciones deterministas sobre las fuentes citadas.
 

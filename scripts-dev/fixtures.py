@@ -59,7 +59,7 @@ def ahora_bogota() -> str:
 
 
 def bajar(url: str) -> bytes:
-    peticion = urllib.request.Request(url, headers={"User-Agent": "SINAPSIS-Medellin/fixtures.py (python-urllib)"})
+    peticion = urllib.request.Request(url, headers={"User-Agent": "PULSO-Medellin/fixtures.py (python-urllib)"})
     with urllib.request.urlopen(peticion, timeout=90) as resp:
         if resp.status != 200:
             raise RuntimeError(f"HTTP {resp.status} en {url}")

@@ -4,14 +4,14 @@ import { DESPACHOS } from "@/lib/despachos";
  * Ilustración original inspirada en el Centro Administrativo La Alpujarra (Medellín):
  * torre con ventanería oscura, fachada de lamas verticales, muro inclinado de concreto,
  * banderas de Colombia, Antioquia y Medellín y el Monumento a la Raza.
- * Cada despacho de SINAPSIS es un punto luminoso; las líneas animadas son las "sinapsis".
+ * Cada despacho de la Agencia de datos es un punto luminoso; las líneas animadas son las conexiones entre ellos.
  */
 
 const LAMAS_ALA = Array.from({ length: 58 }, (_, i) => 585 + i * 10);
 const ALETAS_IZQ = Array.from({ length: 22 }, (_, i) => 18 + i * 18);
 const VENTANAS = Array.from({ length: 17 }, (_, i) => 296 + i * 10.5);
 
-// pares de despachos conectados por sinapsis
+// pares de despachos conectados
 const CONEXIONES: [number, number][] = [
   [0, 1],
   [1, 2],
@@ -79,10 +79,10 @@ export default function EscenaAlpujarra() {
       className="escena block h-auto w-full"
       preserveAspectRatio="xMidYMid slice"
     >
-      <title id="escena-titulo">Edificio SINAPSIS en La Alpujarra</title>
+      <title id="escena-titulo">Agencia de datos de PULSO en La Alpujarra</title>
       <desc id="escena-desc">
         Ilustración de La Alpujarra con las banderas de Colombia, Antioquia y Medellín y el Monumento a la Raza. Los puntos
-        luminosos son los despachos de SINAPSIS.
+        luminosos son los despachos de la Agencia de datos.
       </desc>
       <defs>
         <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
@@ -264,8 +264,8 @@ export default function EscenaAlpujarra() {
       <Persona x={1300} y={735} color="#22c55e" s={1.2} anda={35} />
       <Persona x={1470} y={800} color="#e11d48" s={1.5} />
 
-      {/* Sinapsis: conexiones entre despachos */}
-      <g className="sinapsis">
+      {/* conexiones entre despachos */}
+      <g className="conexiones">
         {CONEXIONES.map(([a, b], i) => {
           const A = DESPACHOS[a];
           const B = DESPACHOS[b];
@@ -274,7 +274,7 @@ export default function EscenaAlpujarra() {
           const d = `M${A.x} ${A.y} Q ${mx} ${my} ${B.x} ${B.y}`;
           return (
             <g key={i}>
-              <path d={d} fill="none" stroke="#7dd3fc" strokeWidth="2" strokeOpacity="0.55" strokeDasharray="6 8" className="sinapsis-linea" />
+              <path d={d} fill="none" stroke="#7dd3fc" strokeWidth="2" strokeOpacity="0.55" strokeDasharray="6 8" className="pulso-linea" />
               <circle r="4" fill="#e0f2fe" filter="url(#brillo)">
                 <animateMotion dur={`${3 + i * 0.7}s`} repeatCount="indefinite" path={d} />
               </circle>

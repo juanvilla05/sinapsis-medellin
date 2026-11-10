@@ -116,7 +116,7 @@ export default function PanelLaboratorio({
     const blob = new Blob(["﻿" + informe.csvLimpio], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${elegido}_muestra_limpia_sinapsis.csv`;
+    a.download = `${elegido}_muestra_limpia_pulso.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
