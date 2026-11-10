@@ -1,19 +1,20 @@
-INSTRUCCIONES - SINAPSIS · Centro de Inteligencia de Datos de Medellín (con PULSO · la ciudad en vivo)
-Equipo: SINAPSIS (Isabela Zuluaga y Juan Camilo Villa) · Hackathon de Datos ITM 2026
+INSTRUCCIONES - PULSO · Medellín en vivo (la Ciudad y la Agencia de datos)
+Equipo: Isabela Zuluaga y Juan Camilo Villa · Hackathon de Datos ITM 2026
 Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsis-medellin
 
 1. QUÉ ES
    PULSO · Medellín en vivo: un mapa 3D de Medellín con el aire de SIATA en vivo, la seguridad vial y
    el hurto de MEData en columnas de 250 m, rutas que se comparan por aire y siniestralidad, y PulsoBot,
-   un asistente que responde citando la fuente y mueve el mapa. Se complementa con La Alpujarra 3D,
-   donde agentes auditan y limpian los datos de MEData (frescura del catálogo, laboratorio de limpieza).
+   un asistente que responde citando la fuente y mueve el mapa. Se complementa con la Agencia de datos,
+   la oficina donde agentes auditan, limpian y proponen mejoras a los datos de MEData (frescura del
+   catálogo, laboratorio de limpieza y ventanilla de apertura con propuestas por conjunto).
    Pregunta que responde: ¿qué tan al día están los datos abiertos de Medellín y qué se puede (y no se
    puede) saber hoy con ellos sobre la ciudad?
 
 2. PROBARLO EN LÍNEA (recomendado, no requiere cuenta)
    Abrir https://pulsomedellin.com
-   La Alpujarra 3D (calidad de los datos): https://pulsomedellin.com/alpujarra
-   Versión sin 3D (panel ejecutivo): https://pulsomedellin.com/panel
+   Agencia de datos (calidad de los datos): https://pulsomedellin.com/alpujarra
+   Panel ejecutivo (sin animación): https://pulsomedellin.com/panel
 
 3. EJECUTARLO EN EL COMPUTADOR
    Requisitos: Node.js 20 o superior (probado con Node 24), navegador con WebGL y conexión a internet.
@@ -45,11 +46,16 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    d) Botón "Rutas" > ejemplo "La Alpujarra -> Parque Lleras" (requiere la clave de Google; está en
       la versión en línea): alternativas con duración, PM2.5 estimado e incidentes históricos
       cercanos, dibujadas sobre el mapa.
-   e) "Datos" / "Calidad de datos" (/alpujarra): "92,6 %" de los conjuntos de MEData con periodicidad
-      declarada está atrasado: 313 de 338. "Entrar a SINAPSIS", clic en un despacho del menú y tecla E.
-      Páginas directas: /monitoreo (Aire, Brecha 2014-2026, Comunas), /laboratorio, /frescura.
+   e) "Datos" / "Calidad de datos" (/alpujarra): la oficina de la Agencia de datos. Arriba, "92,6 %" de
+      los conjuntos de MEData con periodicidad declarada está atrasado: 313 de 338. Clic en un despacho
+      de la oficina, de la barra lateral o de las fichas del equipo abre su herramienta. El botón
+      "2D | 3D" muestra la misma oficina como maqueta 3D que se gira con el mouse o el dedo.
+      Páginas directas: /monitoreo (Aire, Brecha 2014-2026, Comunas), /laboratorio, /frescura, /ventanilla.
    f) /laboratorio > "Víctimas en Incidentes viales": puntaje de calidad 0 -> 98, 52.428 filas
       vacías de 65.489 leídas y 7 columnas con datos personales fuera del CSV descargable.
+   g) /ventanilla (o despacho 03 en la oficina): 428 de los 433 conjuntos tienen propuesta de mejora
+      (291 de prioridad alta): actualizar, declarar periodicidad, publicar los datos detrás de un
+      tablero, documentar columnas o ampliar la descripción. Filtro por secretaría y descarga en CSV.
    Si una fuente no responde, la aplicación lo dice y muestra la copia guardada con su fecha.
 
 5. DATOS Y FUENTES (sin datos personales: solo agregados; conteos de 1 a 4 suprimidos)
@@ -72,13 +78,15 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    src/lib/fixtures/siata-602.json, siata-603.json (y en vivo) · SIATA, capas ICA PM2.5 de estaciones ·
      https://siata.gov.co · licencia no declarada por la fuente (se usa con atribución)
    Laboratorio: cualquier archivo CSV de MEData, leído en vivo; no se guarda.
+   Ventanilla de Apertura: propuestas calculadas del mismo catálogo (src/data/catalogo.json) con reglas
+     deterministas en src/lib/ventanilla.ts; solo metadatos públicos.
    Rutas: Google Routes y Places solo calculan la geometría y los tiempos; el puntaje usa SIATA y MEData.
    Mapa base: OpenFreeMap (© OpenStreetMap), solo cartografía; ninguna cifra sale de él.
    Detalle de cada agregado y de la supresión: src/lib/monitoreo/datos/README.md
 
 6. USO DE IA
-   - Claude (Anthropic): asistente de programación para escribir y depurar código, y Claude Design para
-     el diseño visual del mundo 3D. El equipo revisó y puede explicar cada componente.
+   - Claude (Anthropic): asistente de programación para escribir y depurar código y para diseñar la
+     oficina de la Agencia de datos. El equipo revisó y puede explicar cada componente.
    - Gemini 2.5 Flash (Google), opcional y solo con clave: en PulsoBot y el Analista interpreta la pregunta y
      elige una herramienta. No genera cifras: todas salen de funciones deterministas sobre las fuentes
      de la sección 5. Sin clave, las mismas herramientas responden en modo directo.
