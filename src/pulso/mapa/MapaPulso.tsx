@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from "react";
 import { resumirEstaciones } from "@/lib/aire";
 import { emitir, escuchar } from "../bus";
+import { useTema } from "../tema";
 import type { CapaPulso, EventoPulso } from "../tipos";
 import type { EstadoRecorrido, Motor } from "./motor";
 import {
@@ -87,6 +88,12 @@ const TEXTO_ERROR: Record<MotivoError, string> = {
 export default function MapaPulso({ className = "" }: { className?: string }) {
   const contRef = useRef<HTMLDivElement>(null);
   const motorRef = useRef<Motor | null>(null);
+  const tema = useTema();
+  const temaRef = useRef(tema);
+  useEffect(() => {
+    temaRef.current = tema;
+    motorRef.current?.fijarTema(tema);
+  }, [tema]);
   const vueloPendiente = useRef<Vuelo>(null);
   const camaraPendiente = useRef<Extract<EventoPulso, { tipo: "volar" }> | null>(null);
   const recorridoPendiente = useRef<boolean | null>(null);
@@ -276,6 +283,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         if (!vivo) return;
         const m = await crearMotor({
           contenedor: cont,
+          tema: temaRef.current,
           reducido,
           tactil,
           alListo: () => vivo && alListo(),
@@ -310,6 +318,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     if (estadoMapa !== "listo") return;
     const m = motorRef.current;
     if (!m) return;
+    m.fijarTema(temaRef.current);
     if (camaraPendiente.current) {
       m.volar(camaraPendiente.current);
       camaraPendiente.current = null;
@@ -432,18 +441,18 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       <div className="absolute inset-0">
         <div
           ref={contRef}
-          className="h-full w-full bg-[#0B1220] [&_.maplibregl-canvas:focus-visible]:outline-2 [&_.maplibregl-canvas:focus-visible]:outline-offset-[-4px] [&_.maplibregl-canvas:focus-visible]:outline-[#7DD3FC] [&_.maplibregl-canvas]:outline-none"
+          className="h-full w-full bg-fondo [&_.maplibregl-canvas:focus-visible]:outline-2 [&_.maplibregl-canvas:focus-visible]:outline-offset-[-4px] [&_.maplibregl-canvas:focus-visible]:outline-[#7DD3FC] [&_.maplibregl-canvas]:outline-none"
           aria-label="Mapa 3D de Medellín: aire de SIATA, seguridad vial y hurto de MEData, comunas oficiales"
           role="region"
         />
       </div>
 
       {/* viñeta para que los paneles se lean sobre el mapa */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(11,18,32,0.55)_100%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,var(--vineta)_100%)]" />
 
       {estadoMapa === "cargando" && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center" role="status" aria-live="polite">
-          <div className={`${vidrio} flex items-center gap-3 px-4 py-3 text-[13.5px] text-white/85`}>
+          <div className={`${vidrio} flex items-center gap-3 px-4 py-3 text-[13.5px] text-tinta/85`}>
             <Girador />
             Cargando el mapa de Medellín…
           </div>
@@ -454,7 +463,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         <div className="absolute inset-0 z-10 grid place-items-center px-4" role="alert">
           <div className={`${vidrio} max-w-sm p-5 text-center`}>
             <p className="text-[16px] font-bold">No pudimos mostrar el mapa 3D</p>
-            <p className="mt-1.5 text-[13px] text-white/70">{TEXTO_ERROR[motivo]}</p>
+            <p className="mt-1.5 text-[13px] text-tinta/70">{TEXTO_ERROR[motivo]}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <button
                 type="button"
@@ -462,7 +471,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
                   setEstadoMapa("cargando");
                   setIntento((n) => n + 1);
                 }}
-                className={`rounded-xl bg-white/10 px-3.5 py-2 text-[13px] font-semibold hover:bg-white/15 ${foco}`}
+                className={`rounded-xl bg-tinta/10 px-3.5 py-2 text-[13px] font-semibold hover:bg-tinta/15 ${foco}`}
               >
                 Reintentar
               </button>
