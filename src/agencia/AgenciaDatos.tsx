@@ -8,7 +8,7 @@ import { colorEstado, type DatosMundo } from "@/mundo/datos";
 import { COLOR_AGENTE, COLOR_GLOBO, TEXTO_ESTADO_AGENTE, evaluarAgentes, type AireAgente, type ContextoAgentes, type IdAgente } from "@/mundo/agentes";
 import PanelReloj from "@/mundo/paneles/PanelReloj";
 import PanelLaboratorio, { type OpcionLab } from "@/mundo/paneles/PanelLaboratorio";
-import PanelEnConstruccion from "@/mundo/paneles/PanelEnConstruccion";
+import PanelVentanilla from "@/mundo/paneles/PanelVentanilla";
 import PanelMonitoreo from "@/mundo/paneles/PanelMonitoreo";
 import PanelAnalista from "@/mundo/paneles/PanelAnalista";
 import { MARCA } from "@/lib/marca";
@@ -426,7 +426,7 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
             {areaPanel.id === "lab" && <PanelLaboratorio opciones={opcionesLab} reducido={reducido} onRescate={(n) => setRescatadas((t) => t + n)} />}
             {areaPanel.id === "monitoreo" && <PanelMonitoreo datos={datos} modo="modal" />}
             {areaPanel.id === "analista" && <PanelAnalista modo="modal" onRespuesta={() => setPreguntas((n) => n + 1)} />}
-            {areaPanel.id === "ventanilla" && <PanelEnConstruccion area={areaPanel} />}
+            {areaPanel.id === "ventanilla" && <PanelVentanilla />}
           </div>
         </div>
       )}

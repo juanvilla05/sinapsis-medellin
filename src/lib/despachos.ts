@@ -42,7 +42,7 @@ export const DESPACHOS: Despacho[] = [
     corto: "Ventanilla",
     descripcion: "Propuestas concretas de mejora para cada conjunto: qué campo, qué problema y qué pregunta se podría responder.",
     ruta: "/ventanilla",
-    listo: false,
+    listo: true,
     x: 860,
     y: 400,
     color: "#a78bfa",

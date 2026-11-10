@@ -5,6 +5,7 @@ import catalogo from "@/data/catalogo.json";
 import resumen from "@/data/resumen-catalogo.json";
 import type { ConjuntoAuditado, ResumenCatalogo } from "@/lib/catalogo";
 import { cargarSeguridadVial } from "@/lib/monitoreo/cargar";
+import { construirPropuestas } from "@/lib/ventanilla";
 
 export const metadata: Metadata = { title: "Agencia de datos · La oficina detrás del mapa" };
 
@@ -17,6 +18,7 @@ export default async function Agencia() {
     .map((c) => ({ id: c.id, titulo: c.titulo, publicador: c.publicador, periodicidad: c.periodicidad }));
   // serie de muertes viales por año (MEData + Policía); viene de "use cache", así que la página sigue prerenderizada
   const seguridad = await cargarSeguridadVial();
-  const datos = construirDatosMundo(resumen as ResumenCatalogo, { seguridad });
+  const propuestas = construirPropuestas(catalogo as ConjuntoAuditado[]).length;
+  const datos = construirDatosMundo(resumen as ResumenCatalogo, { seguridad, propuestas });
   return <AgenciaDatos resumen={resumen as ResumenCatalogo} opcionesLab={opcionesLab} datos={datos} />;
 }
