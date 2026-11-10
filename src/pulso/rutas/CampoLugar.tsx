@@ -150,7 +150,7 @@ export default function CampoLugar({
       <label htmlFor={`${id}-campo`} className="sr-only">
         {etiqueta}
       </label>
-      <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 focus-within:border-[#60A5FA] focus-within:ring-2 focus-within:ring-[#60A5FA]/40">
+      <div className="flex items-center gap-2 rounded-xl border border-tinta/15 bg-tinta/[0.06] px-3 focus-within:border-[#60A5FA] focus-within:ring-2 focus-within:ring-[#60A5FA]/40">
         <span aria-hidden="true" className="shrink-0">
           {icono}
         </span>
@@ -174,7 +174,7 @@ export default function CampoLugar({
           }}
           onFocus={() => sugerencias.length > 0 && setAbierto(true)}
           onKeyDown={teclado}
-          className="min-w-0 flex-1 bg-transparent py-2.5 text-[14px] text-white placeholder:text-white/45 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent py-2.5 text-[14px] text-tinta placeholder:text-tinta/45 focus:outline-none"
         />
       </div>
       {mostrarLista && (
@@ -182,7 +182,7 @@ export default function CampoLugar({
           id={idLista}
           role="listbox"
           aria-label={`Sugerencias para ${etiqueta.toLowerCase()}`}
-          className="absolute inset-x-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-y-auto rounded-xl border border-white/15 bg-[#111A2E] p-1 shadow-2xl shadow-black/50"
+          className="absolute inset-x-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-y-auto rounded-xl border border-tinta/15 bg-[#111A2E] p-1 shadow-2xl shadow-black/50"
         >
           {sugerencias.map((s, i) => (
             <li
@@ -195,12 +195,12 @@ export default function CampoLugar({
               onPointerEnter={() => setActiva(i)}
               className={`cursor-pointer rounded-lg px-3 py-2 ${i === activa ? "bg-[#2563EB]/35" : ""}`}
             >
-              <span className="block truncate text-[13.5px] font-semibold text-white">{s.principal}</span>
-              {s.secundario && <span className="block truncate text-[11.5px] text-white/60">{s.secundario}</span>}
+              <span className="block truncate text-[13.5px] font-semibold text-tinta">{s.principal}</span>
+              {s.secundario && <span className="block truncate text-[11.5px] text-tinta/60">{s.secundario}</span>}
             </li>
           ))}
           {mensaje && (
-            <li role="presentation" className="px-3 py-2 text-[12.5px] text-white/65" aria-live="polite">
+            <li role="presentation" className="px-3 py-2 text-[12.5px] text-tinta/65" aria-live="polite">
               {mensaje}
             </li>
           )}

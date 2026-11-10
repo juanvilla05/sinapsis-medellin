@@ -3,6 +3,9 @@
  * Solo tipos: lo importan cliente y servidor. Ninguna cifra vive aquí.
  */
 
+/** Tema visual de PULSO: oscuro (centro de mando) o claro. */
+export type TemaPulso = "oscuro" | "claro";
+
 /** Capas de datos del mapa 3D. */
 export type CapaPulso = "aire" | "incidentes" | "victimas" | "hurto" | "comunas";
 

@@ -37,7 +37,7 @@ export default function AvisoRespuesta({
     >
       <span
         aria-hidden="true"
-        className="flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-[13px] font-bold text-white"
+        className="flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-[13px] font-bold text-tinta"
         style={{ background: e.color }}
       >
         {e.icono}
@@ -62,7 +62,7 @@ export default function AvisoRespuesta({
               <button
                 type="button"
                 onClick={onDirecto}
-                className="rounded-[9px] bg-[#2563EB] px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-[#1D4FD7]"
+                className="rounded-[9px] bg-[#2563EB] px-3 py-1.5 text-[12.5px] font-bold text-tinta hover:bg-[#1D4FD7]"
               >
                 Ver en modo directo
               </button>

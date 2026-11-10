@@ -298,7 +298,7 @@ export default function PanelAnalista({
       items.push(
         <div key={`d-${d.id}`} className="flex flex-col gap-2.5">
           <Burbuja rol="user" oscuro={flotante}>
-            <p className="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-white">{d.pregunta}</p>
+            <p className="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-tinta">{d.pregunta}</p>
           </Burbuja>
           <Burbuja rol="assistant" oscuro={flotante}>
             {d.sinIa && d.aviso && <AvisoRespuesta motivo="sin-clave" titulo="Sin IA respondo las preguntas sugeridas" detalle={d.aviso.detalle} compacto />}
@@ -319,7 +319,7 @@ export default function PanelAnalista({
             )}
             {d.estado === "listo" && d.respuesta && d.respuesta.ok && <Respuesta herramienta={d.herramienta} respuesta={d.respuesta} />}
             {!d.sinIa && (
-              <span className={`font-mono text-[11px] ${flotante ? "text-white/60" : "text-[#64748B]"}`}>
+              <span className={`font-mono text-[11px] ${flotante ? "text-tinta/60" : "text-[#64748B]"}`}>
                 Modo directo · sin modelo de lenguaje · {NOMBRES_HERRAMIENTAS[d.herramienta]}
               </span>
             )}
@@ -338,8 +338,8 @@ export default function PanelAnalista({
   const vacio = messages.length === 0 && directos.length === 0;
 
   const estado = (
-    <div className={`flex flex-wrap items-center justify-between gap-2 ${flotante ? "shrink-0 border-b border-white/10 px-4 py-2.5" : ""}`}>
-      <span className={`flex items-center gap-2 ${flotante ? "text-[12px] text-white/75" : "text-[12.5px] text-[#475569]"}`} role="status">
+    <div className={`flex flex-wrap items-center justify-between gap-2 ${flotante ? "shrink-0 border-b border-tinta/10 px-4 py-2.5" : ""}`}>
+      <span className={`flex items-center gap-2 ${flotante ? "text-[12px] text-tinta/75" : "text-[12.5px] text-[#475569]"}`} role="status">
         <span
           aria-hidden="true"
           className="h-2.5 w-2.5 flex-none rounded-full"
@@ -410,7 +410,7 @@ export default function PanelAnalista({
     <form
       className={
         flotante
-          ? "flex shrink-0 items-center gap-2 border-t border-white/10 bg-[#0B1220] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          ? "flex shrink-0 items-center gap-2 border-t border-tinta/10 bg-fondo px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           : "flex flex-col gap-2 sm:flex-row"
       }
       onSubmit={(e) => {
@@ -438,7 +438,7 @@ export default function PanelAnalista({
         disabled={estadoIa === "detectando"}
         className={
           flotante
-            ? "min-w-0 flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-3.5 py-2.5 text-base text-white placeholder:text-white/55 focus:border-[#60A5FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]/50 disabled:opacity-60 sm:text-[14px]"
+            ? "min-w-0 flex-1 rounded-xl border border-tinta/15 bg-tinta/[0.06] px-3.5 py-2.5 text-base text-tinta placeholder:text-tinta/55 focus:border-[#60A5FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]/50 disabled:opacity-60 sm:text-[14px]"
             : "min-w-0 flex-1 rounded-xl border border-[#E3EAF3] px-3.5 py-2.5 text-[14px] text-[#0F172A] placeholder:text-[#64748B] focus:border-[#2563EB] focus:outline-none disabled:bg-[#F4F7FB]"
         }
       />
@@ -448,8 +448,8 @@ export default function PanelAnalista({
         disabled={ocupado || estadoIa === "detectando" || !texto.trim()}
         className={
           flotante
-            ? "shrink-0 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#1D4FD7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#60A5FA] disabled:opacity-60"
-            : "rounded-xl bg-[#2563EB] px-[18px] py-2.5 text-sm font-bold text-white hover:bg-[#1D4FD7] disabled:opacity-60"
+            ? "shrink-0 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-tinta hover:bg-[#1D4FD7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#60A5FA] disabled:opacity-60"
+            : "rounded-xl bg-[#2563EB] px-[18px] py-2.5 text-sm font-bold text-tinta hover:bg-[#1D4FD7] disabled:opacity-60"
         }
       >
         {ocupado ? (flotante ? "…" : "Consultando…") : flotante ? "Enviar" : puedeIa ? "Preguntar" : "Buscar"}
@@ -459,7 +459,7 @@ export default function PanelAnalista({
 
   if (flotante) {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-[#0B1220] text-white">
+      <div className="flex h-full min-h-0 flex-col bg-fondo text-tinta">
         {estado}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
           {avisos}

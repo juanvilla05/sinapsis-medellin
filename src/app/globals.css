@@ -13,7 +13,29 @@
   --critico: #f87171;
   --atrasado: #fbbf24;
   --al-dia: #34d399;
+  /* PULSO: tinta = color del texto sobre la superficie; fondo = superficie. Oscuro por defecto. */
+  --tinta: #ffffff;
+  --fondo: #0b1220;
+  --vineta: rgba(11, 18, 32, 0.55);
 }
+
+/* PULSO en tema claro: se activa con data-tema="claro" en el contenedor de la portada */
+[data-tema="claro"] {
+  color-scheme: light;
+  --tinta: #0f172a;
+  --fondo: #ffffff;
+  --vineta: rgba(226, 232, 240, 0.6);
+}
+/* sobre los botones de color el texto sigue blanco */
+[data-tema="claro"] :is(.bg-\[\#2563EB\], .bg-\[\#1D4ED8\], .bg-\[\#1D4FD7\], .bg-\[\#1E3A5F\], .bg-\[\#B91C1C\], .bg-\[\#D97706\]) {
+  color: #ffffff;
+}
+/* acentos pensados para fondo oscuro: versión con contraste AA sobre claro */
+[data-tema="claro"] :is(.text-\[\#FDE68A\], .text-\[\#FCD34D\]) { color: #92400e; }
+[data-tema="claro"] :is(.text-\[\#93C5FD\], .text-\[\#BFDBFE\]) { color: #1d4ed8; }
+[data-tema="claro"] .text-\[\#7DD3FC\] { color: #0369a1; }
+[data-tema="claro"] :is(.text-\[\#86EFAC\], .text-\[\#6EE7B7\]) { color: #15803d; }
+[data-tema="claro"] :is(.text-\[\#FECACA\], .text-\[\#F87171\]) { color: #b91c1c; }
 
 @theme inline {
   --color-noche: var(--noche);
@@ -21,6 +43,8 @@
   --color-panel-2: var(--panel-2);
   --color-tenue: var(--tenue);
   --color-verde: var(--verde);
+  --color-tinta: var(--tinta);
+  --color-fondo: var(--fondo);
   --font-sans: var(--font-jakarta);
   --font-mono: var(--font-jetbrains);
 }

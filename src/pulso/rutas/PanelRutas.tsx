@@ -206,12 +206,12 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-base font-bold">Rutas inteligentes</h2>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-white/65">Compara cada alternativa por aire (SIATA en vivo) e incidentes viales reportados (MEData).</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-tinta/65">Compara cada alternativa por aire (SIATA en vivo) e incidentes viales reportados (MEData).</p>
         </div>
         <button
           type="button"
           onClick={onCerrar}
-          className={`shrink-0 rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white ${foco}`}
+          className={`shrink-0 rounded-full p-2 text-tinta/70 hover:bg-tinta/10 hover:text-tinta ${foco}`}
           aria-label="Cerrar rutas"
         >
           <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -261,7 +261,7 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
             onClick={intercambiar}
             aria-label="Intercambiar origen y destino"
             title="Intercambiar origen y destino"
-            className={`absolute right-0 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-white/80 hover:bg-white/15 ${foco}`}
+            className={`absolute right-0 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-tinta/15 bg-tinta/[0.06] text-tinta/80 hover:bg-tinta/15 ${foco}`}
           >
             <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
               <path d="M5 2v12M5 14l-3-3M5 14l3-3M11 14V2M11 2L8 5M11 2l3 3" />
@@ -273,7 +273,7 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
           type="button"
           onClick={usarUbicacion}
           disabled={localizando}
-          className={`self-start rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-[#93C5FD] hover:bg-white/10 disabled:opacity-60 ${foco}`}
+          className={`self-start rounded-full px-2.5 py-1 text-[12.5px] font-semibold text-[#93C5FD] hover:bg-tinta/10 disabled:opacity-60 ${foco}`}
         >
           {localizando ? "Buscando tu ubicación…" : "◎ Usar mi ubicación"}
         </button>
@@ -287,7 +287,7 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
               aria-checked={modo === m}
               onClick={() => setModo(m)}
               className={`rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors motion-reduce:transition-none ${foco} ${
-                modo === m ? "border-[#2563EB] bg-[#2563EB] text-white" : "border-white/15 text-white/80 hover:bg-white/10"
+                modo === m ? "border-[#2563EB] bg-[#2563EB] text-tinta" : "border-tinta/15 text-tinta/80 hover:bg-tinta/10"
               }`}
             >
               {NOMBRE_MODO[m]}
@@ -304,14 +304,14 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
         <button
           type="submit"
           disabled={cargando}
-          className={`rounded-xl bg-[#2563EB] px-4 py-2.5 text-[14px] font-bold text-white hover:bg-[#1D4ED8] disabled:cursor-wait disabled:opacity-70 ${foco}`}
+          className={`rounded-xl bg-[#2563EB] px-4 py-2.5 text-[14px] font-bold text-tinta hover:bg-[#1D4ED8] disabled:cursor-wait disabled:opacity-70 ${foco}`}
         >
           {cargando ? "Calculando…" : "Calcular rutas"}
         </button>
       </form>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-[11.5px] font-semibold uppercase tracking-wide text-white/50">Prueba un ejemplo</span>
+        <span className="text-[11.5px] font-semibold uppercase tracking-wide text-tinta/50">Prueba un ejemplo</span>
         <div className="flex flex-wrap gap-1.5">
           {EJEMPLOS_RUTA.map((ej) => (
             <button
@@ -325,7 +325,7 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
                 setDestino(ej.destino);
                 void calcular(ej.origen, ej.destino, modo);
               }}
-              className={`rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[12px] text-white/85 hover:bg-white/10 disabled:opacity-60 ${foco}`}
+              className={`rounded-full border border-tinta/15 bg-tinta/[0.04] px-2.5 py-1 text-[12px] text-tinta/85 hover:bg-tinta/10 disabled:opacity-60 ${foco}`}
             >
               {ej.corto}
             </button>
@@ -335,16 +335,16 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
 
       <section aria-live="polite" aria-busy={cargando} className="flex flex-col gap-2.5">
         {estado.tipo === "inicial" && (
-          <p className="m-0 rounded-2xl border border-dashed border-white/15 px-3 py-4 text-center text-[13px] text-white/60">
+          <p className="m-0 rounded-2xl border border-dashed border-tinta/15 px-3 py-4 text-center text-[13px] text-tinta/60">
             Elige origen y destino, o prueba un ejemplo. PULSO dibujará las alternativas en el mapa.
           </p>
         )}
 
         {estado.tipo === "cargando" && (
           <>
-            <p className="m-0 text-[12.5px] text-white/70">Calculando rutas con Google y cruzándolas con SIATA y MEData…</p>
+            <p className="m-0 text-[12.5px] text-tinta/70">Calculando rutas con Google y cruzándolas con SIATA y MEData…</p>
             {[0, 1].map((k) => (
-              <div key={k} className="h-[118px] animate-pulse rounded-2xl bg-white/[0.06] motion-reduce:animate-none" aria-hidden="true" />
+              <div key={k} className="h-[118px] animate-pulse rounded-2xl bg-tinta/[0.06] motion-reduce:animate-none" aria-hidden="true" />
             ))}
           </>
         )}
@@ -352,13 +352,13 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
         {estado.tipo === "error" && (
           <div role="alert" className="flex flex-col gap-2 rounded-2xl border border-[#F87171]/30 bg-[#F87171]/10 px-3 py-3 text-[13px] text-[#FECACA]">
             <span>{estado.texto}</span>
-            <button type="button" onClick={() => void calcular()} className={`self-start rounded-full bg-white/10 px-3 py-1 text-[12.5px] font-semibold text-white hover:bg-white/20 ${foco}`}>
+            <button type="button" onClick={() => void calcular()} className={`self-start rounded-full bg-tinta/10 px-3 py-1 text-[12.5px] font-semibold text-tinta hover:bg-tinta/20 ${foco}`}>
               Reintentar
             </button>
           </div>
         )}
 
-        {estado.tipo === "vacio" && <p className="m-0 rounded-2xl border border-white/15 bg-white/[0.04] px-3 py-3 text-[13px] text-white/80">{estado.texto}</p>}
+        {estado.tipo === "vacio" && <p className="m-0 rounded-2xl border border-tinta/15 bg-tinta/[0.04] px-3 py-3 text-[13px] text-tinta/80">{estado.texto}</p>}
 
         {estado.tipo === "sin-clave" && (
           <p className="m-0 rounded-2xl border border-[#FBBF24]/30 bg-[#FBBF24]/10 px-3 py-3 text-[13px] text-[#FDE68A]">
@@ -369,10 +369,10 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
         {estado.tipo === "ok" && (
           <>
             <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-              <span className="min-w-0 break-words text-[13px] font-semibold text-white">
+              <span className="min-w-0 break-words text-[13px] font-semibold text-tinta">
                 {estado.origen.nombre} → {estado.destino.nombre}
               </span>
-              <span className="text-[11.5px] text-white/55">
+              <span className="text-[11.5px] text-tinta/55">
                 {estado.rutas.length === 1 ? "1 alternativa" : `${estado.rutas.length} alternativas`}
                 {estado.desdeBot ? " · pedidas a PulsoBot" : ""}
               </span>
@@ -385,14 +385,14 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
               ))}
             </ul>
             {estado.rutas.length === 1 && (
-              <p className="m-0 text-[12px] text-white/60">Google solo devolvió una ruta para este modo, así que no hay con qué compararla.</p>
+              <p className="m-0 text-[12px] text-tinta/60">Google solo devolvió una ruta para este modo, así que no hay con qué compararla.</p>
             )}
-            <p className="m-0 text-[11.5px] leading-snug text-white/60">
+            <p className="m-0 text-[11.5px] leading-snug text-tinta/60">
               Puntaje 0–100: {Math.round(PESOS_PUNTAJE.aire * 100)} % aire (PM2.5 estimado por distancia a las estaciones SIATA),{" "}
               {Math.round(PESOS_PUNTAJE.siniestralidad * 100)} % incidentes viales históricos a menos de 150 m (MEData, no es tráfico actual) y{" "}
               {Math.round(PESOS_PUNTAJE.tiempo * 100)} % tiempo (Google), comparado entre alternativas.
             </p>
-            <p className="m-0 text-[11.5px] leading-snug text-white/50">
+            <p className="m-0 text-[11.5px] leading-snug text-tinta/50">
               Fuentes: SIATA{lecturaSiata ? `, lectura del ${fechaCorta(lecturaSiata)}` : " (última lectura)"} · MEData Incidentes viales 1-023-25-000094 (CC BY-SA 4.0)
               {corteMedata ? `, corte ${fechaCorta(corteMedata)}` : ""} · Google Routes solo para trazado y tiempos.
             </p>
@@ -407,7 +407,7 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
               >
                 Pregúntale a PULSO por esta ruta
               </button>
-              <button type="button" onClick={limpiar} className={`rounded-xl px-3 py-2 text-[12.5px] font-semibold text-white/70 hover:bg-white/10 ${foco}`}>
+              <button type="button" onClick={limpiar} className={`rounded-xl px-3 py-2 text-[12.5px] font-semibold text-tinta/70 hover:bg-tinta/10 ${foco}`}>
                 Limpiar
               </button>
             </div>

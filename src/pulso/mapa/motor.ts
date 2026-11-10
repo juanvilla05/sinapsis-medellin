@@ -8,14 +8,15 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ColumnLayer, GeoJsonLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { LayersList, PickingInfo } from "@deck.gl/core";
-import type { CapaPulso, PuntoNombrado, RutaPulso } from "../tipos";
-import { estiloNocturno, URL_ESTILO_BASE } from "./estilo";
+import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso } from "../tipos";
+import { estiloPulso, URL_ESTILO_BASE } from "./estilo";
 import {
   acumulado,
   colorCategoria,
   colorRampa,
   GRIS_FUERA,
   hexARgba,
+  puntoEnGeometria,
   type CapaRejilla,
   type CeldaMapa,
   type ComunaMapa,
@@ -36,6 +37,56 @@ const COMETA_MS = 7000;
 /** columna de la celda con más casos (tope p99) ≈ 1,3 km */
 const ALTURA_TOPE_M = 1300;
 const METROS_POR_UG = 55;
+/** Al elegir algo, lo demás queda translúcido (≈16 %) para que lo elegido se lea solo. */
+const ALFA_ATENUADO = 0.16;
+
+type Rgb = [number, number, number];
+type Rgba4 = [number, number, number, number];
+/** Colores de las capas de datos según el tema (reglas de dibujo, no cifras). */
+interface PaletaCapas {
+  comunaLinea: Rgb;
+  comunaLineaSel: Rgb;
+  comunaRelleno: Rgb;
+  textoComuna: Rgba4;
+  textoComunaSel: Rgba4;
+  contornoTexto: Rgba4;
+  anillo: Rgba4;
+  resalte: Rgba4;
+  cometa: Rgb;
+  bordeExtremo: Rgba4;
+  etiquetaTexto: Rgba4;
+  etiquetaFondo: Rgba4;
+}
+const PALETA_CAPAS: Record<TemaPulso, PaletaCapas> = {
+  oscuro: {
+    comunaLinea: [125, 211, 252],
+    comunaLineaSel: [224, 242, 254],
+    comunaRelleno: [56, 189, 248],
+    textoComuna: [203, 225, 245, 230],
+    textoComunaSel: [255, 255, 255, 255],
+    contornoTexto: [11, 18, 32, 235],
+    anillo: [255, 255, 255, 235],
+    resalte: [255, 255, 255, 140],
+    cometa: [240, 249, 255],
+    bordeExtremo: [11, 18, 32, 255],
+    etiquetaTexto: [255, 255, 255, 255],
+    etiquetaFondo: [11, 18, 32, 220],
+  },
+  claro: {
+    comunaLinea: [29, 78, 216],
+    comunaLineaSel: [30, 58, 138],
+    comunaRelleno: [37, 99, 235],
+    textoComuna: [30, 41, 59, 235],
+    textoComunaSel: [15, 23, 42, 255],
+    contornoTexto: [255, 255, 255, 240],
+    anillo: [15, 23, 42, 235],
+    resalte: [15, 23, 42, 90],
+    cometa: [30, 58, 138],
+    bordeExtremo: [255, 255, 255, 255],
+    etiquetaTexto: [15, 23, 42, 255],
+    etiquetaFondo: [255, 255, 255, 235],
+  },
+};
 
 export type MotivoFallo = "webgl" | "teselas";
 export class FalloMapa extends Error {
@@ -62,6 +113,7 @@ export interface EstadoRecorrido {
 
 export interface OpcionesMotor {
   contenedor: HTMLDivElement;
+  tema: TemaPulso;
   reducido: boolean;
   tactil: boolean;
   alListo: () => void;
@@ -78,6 +130,8 @@ export interface Motor {
   vistaInicial: () => void;
   encuadrarRutas: () => void;
   fijarRecorrido: (activo: boolean) => void;
+  /** cambia el mapa base y los colores de las capas sin perder cámara ni datos */
+  fijarTema: (tema: TemaPulso) => void;
   destruir: () => void;
 }
 
@@ -107,14 +161,17 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
   const { contenedor, reducido, tactil } = op;
   if (!hayWebGL()) throw new FalloMapa("webgl");
 
-  let estilo: StyleSpecification;
+  let tema: TemaPulso = op.tema;
+  let P = PALETA_CAPAS[tema];
+  let estiloBase: StyleSpecification;
   try {
     const r = await fetch(URL_ESTILO_BASE, { signal: AbortSignal.timeout(15_000) });
     if (!r.ok) throw new Error("estilo");
-    estilo = estiloNocturno((await r.json()) as StyleSpecification);
+    estiloBase = (await r.json()) as StyleSpecification;
   } catch {
     throw new FalloMapa("teselas");
   }
+  const estilo = estiloPulso(estiloBase, tema);
 
   const angosto = contenedor.clientWidth < 640;
   const vista = { center: [CENTRO.lng, CENTRO.lat] as [number, number], ...VISTA, zoom: angosto ? 10.9 : VISTA.zoom };
@@ -234,20 +291,41 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     return null;
   };
 
-  const overlay = new MapboxOverlay({
-    interleaved: true,
-    useDevicePixels: pixelRatio,
-    layers: [],
-    onHover: (info) => {
-      const objeto = objetoDe(info);
-      map.getCanvas().style.cursor = objeto ? "pointer" : "";
-      op.alPasar(objeto ? { x: info.x, y: info.y, objeto } : null);
-    },
-    onClick: (info) => {
-      op.alTocar(objetoDe(info));
-    },
-  });
+  const crearOverlay = () =>
+    new MapboxOverlay({
+      interleaved: true,
+      useDevicePixels: pixelRatio,
+      layers: [],
+      onHover: (info) => {
+        const objeto = objetoDe(info);
+        map.getCanvas().style.cursor = objeto ? "pointer" : "";
+        op.alPasar(objeto ? { x: info.x, y: info.y, objeto } : null);
+      },
+    });
+  let overlay = crearOverlay();
+  /** mientras el mapa base cambia de estilo no hay overlay donde dibujar */
+  let cambiandoEstilo = false;
+  const quitarOverlay = () => {
+    try {
+      map.removeControl(overlay);
+      overlay.finalize();
+    } catch {
+      // el mapa ya pudo haber liberado el contexto
+    }
+  };
   map.addControl(overlay);
+  // La selección usa el clic de MapLibre y no el "tap" de deck.gl: ese exige soltar en menos de 250 ms y,
+  // con el mapa ocupado o en pantallas táctiles, se perdía cerca de uno de cada cinco toques.
+  map.on("click", (e) => {
+    if (cambiandoEstilo || destruido) return;
+    let info: PickingInfo | null = null;
+    try {
+      info = overlay.pickObject({ x: e.point.x, y: e.point.y, radius: tactil ? 12 : 6 });
+    } catch {
+      info = null;
+    }
+    op.alTocar(info ? objetoDe(info) : null);
+  });
 
   /* ───────── capas ───────── */
   const factorCrecer = (capa: CapaPulso, ahora: number) => {
@@ -257,6 +335,21 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     if (f >= 1) delete crece[capa];
     return f;
   };
+
+  /* ───────── selección: lo elegido sólido, el resto translúcido ───────── */
+  const mismaPos = (a: { lng: number; lat: number }, b: { lng: number; lat: number }) => a.lng === b.lng && a.lat === b.lat;
+  let memoDestacadas: { clave: string; celdas: CeldaMapa[] } | null = null;
+  /** Celdas que siguen sólidas con la selección actual; null = no hay selección que atenúe esta rejilla. */
+  function celdasDestacadas(capa: CapaPulso, celdas: CeldaMapa[]): CeldaMapa[] | null {
+    const sel = st.seleccion;
+    const comuna = st.comunaResaltada ? st.comunas?.find((c) => c.codigo === st.comunaResaltada) : undefined;
+    if (!sel && !comuna) return null;
+    const clave = `${capa}|${celdas.length}|${sel ? `${sel.lng},${sel.lat}` : `c${comuna!.codigo}`}`;
+    if (memoDestacadas?.clave === clave) return memoDestacadas.celdas;
+    const dentro = sel ? celdas.filter((c) => mismaPos(c, sel)) : celdas.filter((c) => puntoEnGeometria(c.lng, c.lat, comuna!.feature.geometry));
+    memoDestacadas = { clave, celdas: dentro };
+    return dentro;
+  }
 
   function capasDeck(ahora: number): LayersList {
     const capas: LayersList = [];
@@ -272,7 +365,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           data: features,
           filled: false,
           stroked: true,
-          getLineColor: [56, 189, 248, 50],
+          getLineColor: [...P.comunaRelleno, 50],
           getLineWidth: 7,
           lineWidthUnits: "pixels",
           parameters: { depthCompare: "always" },
@@ -284,12 +377,16 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           stroked: true,
           pickable: true,
           autoHighlight: true,
-          highlightColor: [125, 211, 252, 70],
-          getFillColor: (f) => (f.properties.codigo === st.comunaResaltada ? [56, 189, 248, 80] : [56, 189, 248, 16]),
-          getLineColor: (f) => (f.properties.codigo === st.comunaResaltada ? [224, 242, 254, 255] : [125, 211, 252, 210]),
+          highlightColor: [...P.comunaLinea, 70],
+          getFillColor: (f) => (f.properties.codigo === st.comunaResaltada ? [...P.comunaRelleno, 70] : [...P.comunaRelleno, 16]),
+          getLineColor: (f) => (f.properties.codigo === st.comunaResaltada ? [...P.comunaLineaSel, 255] : [...P.comunaLinea, st.comunaResaltada ? 90 : 210]),
           getLineWidth: (f) => (f.properties.codigo === st.comunaResaltada ? 3 : 1.3),
           lineWidthUnits: "pixels",
-          updateTriggers: { getFillColor: st.comunaResaltada, getLineColor: st.comunaResaltada, getLineWidth: st.comunaResaltada },
+          updateTriggers: {
+            getFillColor: [st.comunaResaltada, tema],
+            getLineColor: [st.comunaResaltada, tema],
+            getLineWidth: st.comunaResaltada,
+          },
           parameters: { depthCompare: "always", depthWriteEnabled: false },
         }),
       );
@@ -301,14 +398,14 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
             getPosition: (c) => c.centro,
             getText: (c) => c.etiqueta,
             getSize: (c) => (c.codigo === st.comunaResaltada ? 15 : 12.5),
-            getColor: (c) => (c.codigo === st.comunaResaltada ? [255, 255, 255, 255] : [203, 225, 245, 230]),
+            getColor: (c) => (c.codigo === st.comunaResaltada ? P.textoComunaSel : P.textoComuna),
             fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
             fontWeight: 700,
             characterSet: "auto",
             fontSettings: { sdf: true },
             outlineWidth: 3,
-            outlineColor: [11, 18, 32, 235],
-            updateTriggers: { getSize: st.comunaResaltada, getColor: st.comunaResaltada },
+            outlineColor: P.contornoTexto,
+            updateTriggers: { getSize: st.comunaResaltada, getColor: [st.comunaResaltada, tema] },
             parameters: { depthCompare: "always" },
           }),
         );
@@ -320,24 +417,43 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       const rej = st.rejillas[capa];
       if (!st.capas[capa] || !rej) continue;
       const g = factorCrecer(capa, ahora);
+      const destacadas = celdasDestacadas(capa, rej.celdas);
+      const alfa = destacadas ? Math.round(235 * ALFA_ATENUADO) : 235;
+      const columnas = {
+        diskResolution: 4,
+        angle: 45,
+        radius: 150,
+        extruded: true,
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: P.resalte,
+        getPosition: (c: CeldaMapa) => [c.lng, c.lat] as [number, number],
+        getElevation: (c: CeldaMapa) => c.h,
+        elevationScale: (ALTURA_TOPE_M / Math.sqrt(rej.tope)) * Math.max(0.001, g) * fz,
+        material: { ambient: 0.55, diffuse: 0.55, shininess: 24, specularColor: [90, 140, 200] as Rgb },
+      };
       capas.push(
         new ColumnLayer<CeldaMapa>({
+          ...columnas,
           id: `rejilla-${capa}`,
           data: rej.celdas,
-          diskResolution: 4,
-          angle: 45,
-          radius: 150,
-          extruded: true,
-          pickable: true,
-          autoHighlight: true,
-          highlightColor: [255, 255, 255, 140],
-          getPosition: (c) => [c.lng, c.lat],
-          getElevation: (c) => c.h,
-          elevationScale: (ALTURA_TOPE_M / Math.sqrt(rej.tope)) * Math.max(0.001, g) * fz,
-          getFillColor: (c) => colorRampa(c.t, 235),
-          material: { ambient: 0.55, diffuse: 0.55, shininess: 24, specularColor: [90, 140, 200] },
+          getFillColor: (c) => colorRampa(c.t, alfa, tema),
+          updateTriggers: { getFillColor: [alfa, tema] },
+          // translúcidas no escriben profundidad: así no tapan a la columna elegida ni a la ciudad
+          parameters: destacadas ? { depthWriteEnabled: false } : {},
         }),
       );
+      if (destacadas && destacadas.length > 0) {
+        capas.push(
+          new ColumnLayer<CeldaMapa>({
+            ...columnas,
+            id: `rejilla-${capa}-destacadas`,
+            data: destacadas,
+            getFillColor: (c) => colorRampa(c.t, 250, tema),
+            updateTriggers: { getFillColor: tema },
+          }),
+        );
+      }
     }
 
     // 1) aire: faros de PM2.5 + pulso
@@ -346,6 +462,10 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       const conDato = st.estaciones.filter((e) => e.pm25 !== null);
       const enMed = conDato.filter((e) => e.enMedellin);
       const fase = reducido ? 0.35 : (ahora % 2400) / 2400;
+      // con una estación o celda elegida, los demás faros se vuelven translúcidos
+      const sel = st.seleccion;
+      const kFaro = (e: EstacionSiata) => (sel && !mismaPos(e, sel) ? ALFA_ATENUADO : 1);
+      const claveSel = sel ? `${sel.lng},${sel.lat}` : "";
       for (const [k, desfase] of [0, 0.5].entries()) {
         const f = (fase + desfase) % 1;
         if (reducido && k > 0) break;
@@ -376,7 +496,8 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           getRadius: 170,
           radiusUnits: "meters",
           radiusMinPixels: 3,
-          getFillColor: (e) => (!e.enMedellin || e.pm25 === null ? GRIS_FUERA : colorCategoria(e.categoria, 150)),
+          getFillColor: (e) => (!e.enMedellin || e.pm25 === null ? GRIS_FUERA : colorCategoria(e.categoria, Math.round(150 * kFaro(e)))),
+          updateTriggers: { getFillColor: claveSel },
           parameters: { depthCompare: "always", depthWriteEnabled: false },
         }),
         new ColumnLayer<EstacionSiata>({
@@ -387,11 +508,13 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           extruded: true,
           pickable: true,
           autoHighlight: true,
-          highlightColor: [255, 255, 255, 120],
+          highlightColor: P.resalte,
           getPosition: (e) => [e.lng, e.lat],
           getElevation: (e) => e.pm25 ?? 0,
           elevationScale: METROS_POR_UG * Math.max(0.001, g) * fz,
-          getFillColor: (e) => (e.enMedellin ? colorCategoria(e.categoria, 240) : GRIS_FUERA),
+          getFillColor: (e) => (e.enMedellin ? colorCategoria(e.categoria, Math.round(240 * kFaro(e))) : [GRIS_FUERA[0], GRIS_FUERA[1], GRIS_FUERA[2], Math.round(GRIS_FUERA[3] * kFaro(e))]),
+          updateTriggers: { getFillColor: claveSel },
+          parameters: sel ? { depthWriteEnabled: false } : {},
           material: { ambient: 0.6, diffuse: 0.5, shininess: 40, specularColor: [255, 255, 255] },
         }),
       );
@@ -408,7 +531,8 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           radiusUnits: "meters",
           filled: false,
           stroked: true,
-          getLineColor: [255, 255, 255, 235],
+          getLineColor: P.anillo,
+          updateTriggers: { getLineColor: tema },
           lineWidthMinPixels: 2.5,
           parameters: { depthCompare: "always", depthWriteEnabled: false },
         }),
@@ -464,7 +588,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
             data: trayecto,
             getPath: (d) => d.path,
             getTimestamps: (d) => d.timestamps,
-            getColor: [240, 249, 255],
+            getColor: P.cometa,
             getWidth: 6,
             widthUnits: "pixels",
             capRounded: true,
@@ -485,7 +609,8 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           radiusUnits: "pixels",
           getFillColor: (p) => (p.rol === "origen" ? [52, 211, 153, 255] : [244, 114, 182, 255]),
           stroked: true,
-          getLineColor: [11, 18, 32, 255],
+          getLineColor: P.bordeExtremo,
+          updateTriggers: { getLineColor: tema },
           lineWidthMinPixels: 3,
           parameters: sinProfundidad,
         }),
@@ -495,13 +620,14 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           getPosition: (p) => [p.lng, p.lat],
           getText: (p) => `${p.rol === "origen" ? "Origen" : "Destino"} · ${p.nombre.length > 34 ? `${p.nombre.slice(0, 33)}…` : p.nombre}`,
           getSize: 13,
-          getColor: [255, 255, 255, 255],
+          getColor: P.etiquetaTexto,
           getPixelOffset: [0, -22],
           fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
           fontWeight: 700,
           characterSet: "auto",
           background: true,
-          getBackgroundColor: [11, 18, 32, 220],
+          getBackgroundColor: P.etiquetaFondo,
+          updateTriggers: { getColor: tema, getBackgroundColor: tema },
           backgroundPadding: [6, 3],
           parameters: sinProfundidad,
         }),
@@ -528,7 +654,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       map.setBearing(map.getBearing() + dt * GIRO_GRADOS_POR_MS);
     }
     // en táctil basta con ~30 cuadros por segundo para el pulso
-    if (!tactil || girando || ahora - ultimoCuadro > 32) {
+    if (!cambiandoEstilo && (!tactil || girando || ahora - ultimoCuadro > 32)) {
       ultimoCuadro = ahora;
       overlay.setProps({ layers: capasDeck(ahora) });
     }
@@ -671,6 +797,24 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     volar,
     vistaInicial: () => volar({ lat: CENTRO.lat, lng: CENTRO.lng, zoom: vista.zoom, inclinacion: vista.pitch, rumbo: vista.bearing }),
     encuadrarRutas,
+    fijarTema(nuevo) {
+      if (nuevo === tema || destruido) return;
+      tema = nuevo;
+      P = PALETA_CAPAS[tema];
+      // deck.gl intercalado pierde la selección (picking) si el estilo cambia por debajo:
+      // se quita el overlay, se cambia el estilo y se monta uno nuevo cuando el estilo termina de cargar
+      cambiandoEstilo = true;
+      op.alPasar(null);
+      quitarOverlay();
+      map.setStyle(estiloPulso(estiloBase, tema), { diff: false });
+      map.once("style.load", () => {
+        if (destruido) return;
+        overlay = crearOverlay();
+        map.addControl(overlay);
+        cambiandoEstilo = false;
+        pedirCuadro();
+      });
+    },
     fijarRecorrido(activo) {
       window.clearTimeout(temporizador);
       if (activo) {
@@ -690,12 +834,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       window.clearTimeout(vigia);
       document.removeEventListener("visibilitychange", alVisibilidad);
       for (const ev of EVENTOS_INTERACCION) contenedor.removeEventListener(ev, interaccion);
-      try {
-        map.removeControl(overlay);
-        overlay.finalize();
-      } catch {
-        // el mapa ya pudo haber liberado el contexto
-      }
+      if (!cambiandoEstilo) quitarOverlay();
       try {
         map.remove();
       } catch {

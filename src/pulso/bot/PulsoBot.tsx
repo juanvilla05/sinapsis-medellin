@@ -41,9 +41,9 @@ function IconoCerrar() {
 
 function Bienvenida() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-      <p className="m-0 text-[15px] font-semibold text-white">Hola, soy PulsoBot.</p>
-      <p className="m-0 mt-1 text-[13.5px] leading-relaxed text-white/75">
+    <div className="rounded-2xl border border-tinta/10 bg-tinta/[0.04] p-4">
+      <p className="m-0 text-[15px] font-semibold text-tinta">Hola, soy PulsoBot.</p>
+      <p className="m-0 mt-1 text-[13.5px] leading-relaxed text-tinta/75">
         Pregúntame por el aire, la seguridad vial o el hurto en Medellín. Te respondo con la cifra y su fuente (SIATA, MEData, Policía Nacional) y te lo
         muestro en el mapa.
       </p>
@@ -182,7 +182,7 @@ export default function PulsoBot() {
       aria-label={dictado.escuchando ? "Detener el dictado" : "Dictar la pregunta por voz"}
       title={dictado.escuchando ? "Detener el dictado" : "Dictar la pregunta por voz"}
       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${foco} ${
-        dictado.escuchando ? "border-[#F87171] bg-[#B91C1C] text-white motion-safe:animate-pulse" : "border-white/15 bg-white/[0.06] text-white hover:bg-white/10"
+        dictado.escuchando ? "border-[#F87171] bg-[#B91C1C] text-tinta motion-safe:animate-pulse" : "border-tinta/15 bg-tinta/[0.06] text-tinta hover:bg-tinta/10"
       }`}
     >
       <IconoMicrofono />
@@ -205,7 +205,7 @@ export default function PulsoBot() {
         aria-label={`Pregúntale a PULSO: abre PulsoBot, ${descripcionIa}`}
         aria-expanded={abierto}
         aria-controls="pulsobot-cajon"
-        className={`absolute right-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-30 items-center gap-3 rounded-full border border-white/15 bg-[#0B1220]/85 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,.45)] backdrop-blur transition-colors hover:border-[#60A5FA]/60 sm:right-6 sm:bottom-8 sm:pr-5 ${foco} ${
+        className={`absolute right-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-30 items-center gap-3 rounded-full border border-tinta/15 bg-fondo/85 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,.45)] backdrop-blur transition-colors hover:border-[#60A5FA]/60 sm:right-6 sm:bottom-8 sm:pr-5 ${foco} ${
           abierto || rutasAbiertas ? "hidden" : "flex"
         }`}
       >
@@ -214,16 +214,16 @@ export default function PulsoBot() {
           <span
             aria-hidden="true"
             className={`absolute -top-1.5 -left-2 rounded-full px-1.5 py-px text-[10px] font-bold sm:hidden ${
-              ia === "si" ? "bg-[#16A34A] text-white" : ia === "no" ? "bg-[#FBBF24] text-[#0B1220]" : "bg-white/20 text-white"
+              ia === "si" ? "bg-[#16A34A] text-white" : ia === "no" ? "bg-[#FBBF24] text-[#0B1220]" : "bg-tinta/20 text-tinta"
             }`}
           >
             {ia === "no" ? "directo" : etiquetaIa}
           </span>
         </span>
         <span className="hidden flex-col items-start leading-tight sm:flex">
-          <span className="text-[14px] font-bold text-white">Pregúntale a PULSO</span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-white/70" aria-hidden="true">
-            <span className={`h-2 w-2 rounded-full ${ia === "si" ? "bg-[#22C55E]" : ia === "no" ? "bg-[#FBBF24]" : "bg-white/40"}`} />
+          <span className="text-[14px] font-bold text-tinta">Pregúntale a PULSO</span>
+          <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-tinta/70" aria-hidden="true">
+            <span className={`h-2 w-2 rounded-full ${ia === "si" ? "bg-[#22C55E]" : ia === "no" ? "bg-[#FBBF24]" : "bg-tinta/40"}`} />
             {ia === "si" ? "con IA" : ia === "no" ? "modo directo" : "conectando…"}
           </span>
         </span>
@@ -237,24 +237,24 @@ export default function PulsoBot() {
         aria-modal="false"
         aria-labelledby="pulsobot-titulo"
         aria-describedby="pulsobot-subtitulo"
-        className={`absolute inset-0 z-40 flex-col overflow-hidden bg-[#0B1220] text-white sm:inset-auto sm:top-[76px] sm:right-0 sm:bottom-0 sm:w-[420px] sm:rounded-tl-3xl sm:border-t sm:border-l sm:border-white/10 sm:shadow-[-20px_0_60px_rgba(0,0,0,.45)] ${
+        className={`absolute inset-0 z-40 flex-col overflow-hidden bg-fondo text-tinta sm:inset-auto sm:top-[76px] sm:right-0 sm:bottom-0 sm:w-[420px] sm:rounded-tl-3xl sm:border-t sm:border-l sm:border-tinta/10 sm:shadow-[-20px_0_60px_rgba(0,0,0,.45)] ${
           abierto ? "flex" : "hidden"
         } ${minimizado ? "max-sm:hidden" : ""}`}
       >
-        <header className="flex shrink-0 items-start gap-3 border-b border-white/10 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+        <header className="flex shrink-0 items-start gap-3 border-b border-tinta/10 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
           <Orbe tam="h-9 w-9" latido={false} />
           <div className="min-w-0 flex-1">
             <h2 id="pulsobot-titulo" className="m-0 flex flex-wrap items-center gap-2 text-[16px] font-extrabold tracking-wide">
               PulsoBot
               <span
                 className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-normal ${
-                  ia === "si" ? "bg-[#16A34A]/20 text-[#86EFAC]" : ia === "no" ? "bg-[#FBBF24]/15 text-[#FCD34D]" : "bg-white/10 text-white/70"
+                  ia === "si" ? "bg-[#16A34A]/20 text-[#86EFAC]" : ia === "no" ? "bg-[#FBBF24]/15 text-[#FCD34D]" : "bg-tinta/10 text-tinta/70"
                 }`}
               >
                 {ia === "si" ? "IA" : ia === "no" ? "modo directo" : "detectando…"}
               </span>
             </h2>
-            <p id="pulsobot-subtitulo" className="m-0 mt-0.5 text-[12px] text-white/70">
+            <p id="pulsobot-subtitulo" className="m-0 mt-0.5 text-[12px] text-tinta/70">
               disponible 24/7 · cada cifra con su fuente
             </p>
           </div>
@@ -263,22 +263,22 @@ export default function PulsoBot() {
             type="button"
             onClick={cerrar}
             aria-label="Cerrar PulsoBot"
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white ${foco}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-tinta/80 hover:bg-tinta/10 hover:text-tinta ${foco}`}
           >
             <IconoCerrar />
           </button>
         </header>
 
         {(lectura.soportada || estadoVoz || aviso) && (
-          <div className="flex shrink-0 flex-col gap-2 border-b border-white/10 px-4 py-2.5">
+          <div className="flex shrink-0 flex-col gap-2 border-b border-tinta/10 px-4 py-2.5">
             {lectura.soportada && (
               <div className="flex items-center justify-between gap-3">
-                <span id="pulsobot-voz" className="text-[12.5px] text-white/80">
+                <span id="pulsobot-voz" className="text-[12.5px] text-tinta/80">
                   Leer respuestas en voz alta
                 </span>
                 <div className="flex items-center gap-2">
                   {lectura.hablando && (
-                    <button type="button" onClick={callar} className={`rounded-lg px-2 py-1 text-[12px] font-semibold text-[#93C5FD] hover:bg-white/10 ${foco}`}>
+                    <button type="button" onClick={callar} className={`rounded-lg px-2 py-1 text-[12px] font-semibold text-[#93C5FD] hover:bg-tinta/10 ${foco}`}>
                       Callar
                     </button>
                   )}
@@ -288,7 +288,7 @@ export default function PulsoBot() {
                     aria-checked={lectura.activa}
                     aria-labelledby="pulsobot-voz"
                     onClick={() => lectura.setActiva(!lectura.activa)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${foco} ${lectura.activa ? "bg-[#2563EB]" : "bg-white/20"}`}
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${foco} ${lectura.activa ? "bg-[#2563EB]" : "bg-tinta/20"}`}
                   >
                     <span
                       aria-hidden="true"
@@ -328,16 +328,16 @@ export default function PulsoBot() {
 
       {/* Móvil: tras mover el mapa, el cajón se minimiza a esta barra para que se vea el mapa. */}
       {abierto && minimizado && (
-        <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-2xl border border-white/15 bg-[#0B1220]/95 p-2 pl-3 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur sm:hidden">
+        <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-2xl border border-tinta/15 bg-fondo/95 p-2 pl-3 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur sm:hidden">
           <span aria-hidden="true" className="h-2.5 w-2.5 flex-none rounded-full bg-[#22C55E]" />
-          <p className="m-0 min-w-0 flex-1 text-[13px] leading-tight font-semibold text-white" role="status">
+          <p className="m-0 min-w-0 flex-1 text-[13px] leading-tight font-semibold text-tinta" role="status">
             Te lo muestro en el mapa
           </p>
           <button
             ref={volverRef}
             type="button"
             onClick={() => setMinimizado(false)}
-            className={`shrink-0 rounded-xl bg-[#2563EB] px-3 py-2 text-[13px] font-bold text-white hover:bg-[#1D4FD7] ${foco}`}
+            className={`shrink-0 rounded-xl bg-[#2563EB] px-3 py-2 text-[13px] font-bold text-tinta hover:bg-[#1D4FD7] ${foco}`}
           >
             Volver al chat
           </button>
@@ -345,7 +345,7 @@ export default function PulsoBot() {
             type="button"
             onClick={cerrar}
             aria-label="Cerrar PulsoBot"
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white/80 hover:bg-white/10 ${foco}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-tinta/80 hover:bg-tinta/10 ${foco}`}
           >
             <IconoCerrar />
           </button>

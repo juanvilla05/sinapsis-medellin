@@ -6,7 +6,7 @@
 import type { EstacionSiata, SnapshotSiata, SnapshotSiataOk } from "@/lib/aire";
 import { CATEGORIAS, type ClaveCategoria } from "@/lib/ica";
 import type { CeldaRejillaVictimas, FuenteAgregado, RejillaHurto, RejillaIncidentes, RejillaVictimas, ResolucionRejilla } from "@/lib/monitoreo/esquemas";
-import type { CapaPulso, PuntoNombrado, RutaPulso } from "../tipos";
+import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso } from "../tipos";
 
 export type { EstacionSiata, SnapshotSiata, SnapshotSiataOk };
 
@@ -130,28 +130,44 @@ export function hexARgba(hex: string, alfa = 255): Rgba {
 export const colorCategoria = (c: ClaveCategoria, alfa = 255) => hexARgba(CATEGORIAS[c].color, alfa);
 export const GRIS_FUERA: Rgba = [148, 163, 184, 110];
 
-/** Rampa secuencial azul → cian → blanco (sin rojo/verde: no califica territorios). */
-export const RAMPA: { t: number; hex: string }[] = [
-  { t: 0, hex: "#1E3A8A" },
-  { t: 0.35, hex: "#2563EB" },
-  { t: 0.6, hex: "#0EA5E9" },
-  { t: 0.82, hex: "#67E8F9" },
-  { t: 1, hex: "#F8FAFC" },
-];
-const RAMPA_RGB = RAMPA.map((p) => ({ t: p.t, c: hexARgba(p.hex) }));
-export function colorRampa(t: number, alfa = 240): Rgba {
+/**
+ * Rampas secuenciales (sin rojo/verde: no califican territorios).
+ * Oscuro: azul → cian → blanco (lo más alto brilla). Claro: azul claro → azul noche (lo más alto pesa).
+ */
+export const RAMPAS: Record<TemaPulso, { t: number; hex: string }[]> = {
+  oscuro: [
+    { t: 0, hex: "#1E3A8A" },
+    { t: 0.35, hex: "#2563EB" },
+    { t: 0.6, hex: "#0EA5E9" },
+    { t: 0.82, hex: "#67E8F9" },
+    { t: 1, hex: "#F8FAFC" },
+  ],
+  claro: [
+    { t: 0, hex: "#93C5FD" },
+    { t: 0.35, hex: "#3B82F6" },
+    { t: 0.6, hex: "#1D4ED8" },
+    { t: 0.82, hex: "#1E3A8A" },
+    { t: 1, hex: "#0B1F4B" },
+  ],
+};
+const RAMPAS_RGB = {
+  oscuro: RAMPAS.oscuro.map((p) => ({ t: p.t, c: hexARgba(p.hex) })),
+  claro: RAMPAS.claro.map((p) => ({ t: p.t, c: hexARgba(p.hex) })),
+};
+export function colorRampa(t: number, alfa = 240, tema: TemaPulso = "oscuro"): Rgba {
+  const R = RAMPAS_RGB[tema];
   const x = Math.min(1, Math.max(0, t));
-  for (let k = 1; k < RAMPA_RGB.length; k++) {
-    const a = RAMPA_RGB[k - 1]!;
-    const b = RAMPA_RGB[k]!;
+  for (let k = 1; k < R.length; k++) {
+    const a = R[k - 1]!;
+    const b = R[k]!;
     if (x <= b.t) {
       const f = (x - a.t) / (b.t - a.t || 1);
       return [0, 1, 2].map((i) => Math.round(a.c[i]! + (b.c[i]! - a.c[i]!) * f)).concat(alfa) as Rgba;
     }
   }
-  return [...RAMPA_RGB[RAMPA_RGB.length - 1]!.c.slice(0, 3), alfa] as Rgba;
+  return [...R[R.length - 1]!.c.slice(0, 3), alfa] as Rgba;
 }
-export const GRADIENTE_CSS = `linear-gradient(90deg, ${RAMPA.map((p) => `${p.hex} ${p.t * 100}%`).join(", ")})`;
+export const gradienteCss = (tema: TemaPulso) => `linear-gradient(90deg, ${RAMPAS[tema].map((p) => `${p.hex} ${p.t * 100}%`).join(", ")})`;
 
 /* ───────── rejillas de 250 m ───────── */
 
