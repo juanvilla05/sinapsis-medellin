@@ -12,8 +12,12 @@ import PanelVentanilla from "@/mundo/paneles/PanelVentanilla";
 import PanelMonitoreo from "@/mundo/paneles/PanelMonitoreo";
 import PanelAnalista from "@/mundo/paneles/PanelAnalista";
 import { MARCA } from "@/lib/marca";
+import dynamic from "next/dynamic";
 import OficinaIso, { SALAS } from "./OficinaIso";
 import Persona, { LOOKS } from "./Persona";
+
+/** La maqueta 3D se carga solo si la persona la pide (three.js no entra en la carga inicial). */
+const Oficina3D = dynamic(() => import("./Oficina3D"), { ssr: false });
 
 /** Nombre visible de cada agente en la Agencia. El Analista es el mismo asistente de PULSO: PulsoBot. */
 const NOMBRE: Record<IdArea, string> = {
@@ -103,6 +107,7 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
   const [preguntas, setPreguntas] = useState(0);
   const [aire, setAire] = useState<AireAgente | null | undefined>(undefined);
   const [reducido, setReducido] = useState(false);
+  const [vista, setVista] = useState<"2d" | "3d">("2d");
   const cerrarRef = useRef<HTMLButtonElement>(null);
   const origenRef = useRef<HTMLElement | null>(null);
 
@@ -310,17 +315,33 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
                   </Link>
                 </li>
               </ol>
-              <span className="ml-auto flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-2.5 py-1 text-[11.5px] font-semibold text-[#15803D]">
+              <div role="group" aria-label="Vista de la oficina" className="ml-auto flex rounded-lg border border-[#E3EAF3] bg-[#F4F7FB] p-0.5 text-[12px] font-bold">
+                {(["2d", "3d"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setVista(v)}
+                    aria-pressed={vista === v}
+                    className={`rounded-md px-2.5 py-1 transition-colors ${vista === v ? "bg-[#0B1220] text-white" : "text-[#475569] hover:text-[#0B1220]"}`}
+                  >
+                    {v.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <span className="flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-2.5 py-1 text-[11.5px] font-semibold text-[#15803D]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#16A34A]" aria-hidden="true" />
                 {[trabajando > 0 && `${trabajando} trabajando`, teNecesitan > 0 && `${teNecesitan} te ${teNecesitan === 1 ? "necesita" : "necesitan"}`].filter(Boolean).join(" · ") ||
                   `${AREAS_MUNDO.length} agentes esperando`}
               </span>
             </div>
             <div className="bg-[linear-gradient(180deg,#F8FAFD_0%,#EEF3F9_100%)] px-1 pb-2 pt-3 sm:px-4">
-              <OficinaIso agentes={agentes} datos={datos} onAbrir={abrir} enfocado={enfocado} />
+              {vista === "2d" ? (
+                <OficinaIso agentes={agentes} datos={datos} onAbrir={abrir} enfocado={enfocado} />
+              ) : (
+                <Oficina3D agentes={agentes} datos={datos} onAbrir={abrir} enfocado={enfocado} onFallo={() => setVista("2d")} />
+              )}
             </div>
             <p className="border-t border-[#EEF2F7] px-4 py-2.5 text-center text-[12px] text-[#64748B] sm:px-5">
-              Toca un despacho para abrir su herramienta. La salida azul lleva a PULSO, la ciudad en vivo.
+              {vista === "2d" ? "Toca un despacho para abrir su herramienta." : "Gira la maqueta y toca un despacho para abrir su herramienta."} La salida azul lleva a PULSO, la ciudad en vivo.
             </p>
           </section>
 
