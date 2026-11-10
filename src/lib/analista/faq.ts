@@ -46,7 +46,7 @@ export function explicarFuentes(tema: TemaFaq, resumen: ResumenCatalogo): Respue
 
   const porTema: Record<TemaFaq, { titulo: string; parrafos: string[]; citas: Cita[] }> = {
     fuentes: {
-      titulo: "De dónde salen los datos de SINAPSIS",
+      titulo: "De dónde salen los datos de PULSO Medellín",
       parrafos: [
         `Todo parte del catálogo abierto de MEData, el portal de datos de la Alcaldía de Medellín. El pipeline del proyecto leyó sus ${miles(resumen.totalConjuntos)} conjuntos el ${corte} y guardó, por cada uno, la fecha de modificación, la periodicidad prometida y los archivos publicados.`,
         `La calidad del aire viene de SIATA, el Sistema de Alerta Temprana del Valle de Aburrá, que publica las lecturas de sus estaciones en capas abiertas de su visor. SIATA no declara licencia: lo decimos tal cual y lo usamos con atribución.`,
@@ -58,7 +58,7 @@ export function explicarFuentes(tema: TemaFaq, resumen: ResumenCatalogo): Respue
     reproducir: {
       titulo: "Cómo reproducir las cifras",
       parrafos: [
-        `El catálogo se descarga de la API pública de MEData (metastore DKAN). Para cada conjunto, SINAPSIS compara los días transcurridos desde la fecha de modificación con la periodicidad declarada: hasta una vez y media el plazo es “al día”, hasta tres veces es “atrasado” y más de eso es “crítico”.`,
+        `El catálogo se descarga de la API pública de MEData (metastore DKAN). Para cada conjunto, PULSO Medellín compara los días transcurridos desde la fecha de modificación con la periodicidad declarada: hasta una vez y media el plazo es “al día”, hasta tres veces es “atrasado” y más de eso es “crítico”.`,
         `Con ese criterio, de los ${miles(resumen.evaluables)} conjuntos que declaran una periodicidad comparable, ${miles(atrasados)} están atrasados o críticos (${decimal(resumen.pctAtrasados)} %). El resto del catálogo no declara periodicidad o no se puede evaluar.`,
         `El Laboratorio de Limpieza descarga el inicio y el final de cada archivo CSV directamente desde MEData con peticiones por rango, detecta la codificación, cuenta filas vacías y duplicadas y aplica reglas de limpieza reproducibles. El puntaje de calidad se calcula antes y después.`,
         `El script del pipeline está en el repositorio y vuelve a generar los archivos de datos; la fecha de corte que ves en cada respuesta es la de esa última ejecución.`,
@@ -70,17 +70,17 @@ export function explicarFuentes(tema: TemaFaq, resumen: ResumenCatalogo): Respue
       parrafos: [
         `En el catálogo, ${miles(resumen.fechasIrregulares)} conjuntos publican la fecha de modificación en formato día-mes-año en vez del estándar ISO, ${miles(resumen.sinDiccionario)} no tienen diccionario de datos y ${miles(resumen.soloTablero)} solo publican un tablero sin archivo descargable.`,
         `Varios conjuntos de seguridad vial y de hurto traen coordenadas con coma decimal, códigos de comuna sin ceros a la izquierda, filas vacías de relleno y textos con la codificación rota. El Laboratorio los repara en vivo y deja constancia en su bitácora.`,
-        `Por respeto a las personas, SINAPSIS nunca muestra filas individuales de víctimas ni de hurtos: solo agregados por comuna, hora o año, y suprime cualquier celda con menos de cinco casos. Tampoco califica barrios: decimos “más casos reportados que el promedio”, nunca “inseguro”.`,
+        `Por respeto a las personas, PULSO Medellín nunca muestra filas individuales de víctimas ni de hurtos: solo agregados por comuna, hora o año, y suprime cualquier celda con menos de cinco casos. Tampoco califica barrios: decimos “más casos reportados que el promedio”, nunca “inseguro”.`,
         `La fecha de corte de cada fuente es la que ves en la tarjeta; cuando una fuente en vivo no responde, mostramos la copia guardada con su fecha y lo avisamos.`,
       ],
       citas: [citaCatalogo],
     },
     "como-usar": {
-      titulo: "Cómo usar el Analista",
+      titulo: "Soy PulsoBot, el asistente de PULSO Medellín",
       parrafos: [
-        `Escribe una pregunta en español o toca una de las preguntas sugeridas. El Analista no inventa: cada respuesta se calcula con una herramienta determinista que lee los datos del proyecto y te devuelve la cifra con su conjunto, su campo y su fecha de corte.`,
-        `Si esta instalación tiene clave de Gemini, el modelo elige la herramienta y redacta la respuesta; siempre puedes pulsar “Ver la misma respuesta sin IA” para obtener el dato crudo con las mismas citas.`,
-        `Sin clave, el Analista trabaja en modo directo: las mismas preguntas y las mismas herramientas, sin modelo de lenguaje. El texto libre busca conjuntos en el catálogo por nombre.`,
+        `Puedes escribirme o hablarme. Te cuento cómo está el aire ahora, cuántos incidentes viales o hurtos se han reportado por comuna, cuál es la ruta con mejor aire entre dos lugares y qué tan al día están los datos abiertos de la ciudad.`,
+        `También manejo la plataforma por ti: dime “muéstrame los hurtos en el mapa”, “pon el tema claro”, “inicia el recorrido” o “abre el laboratorio”.`,
+        `No invento cifras: cada respuesta sale de una fuente abierta (SIATA, MEData, Policía Nacional) y te digo cuál es y de qué fecha.`,
       ],
       citas: [citaCatalogo],
     },
@@ -89,7 +89,7 @@ export function explicarFuentes(tema: TemaFaq, resumen: ResumenCatalogo): Respue
       parrafos: [
         `El modelo de lenguaje no genera cifras. Solo invoca funciones deterministas que leen los archivos del pipeline, SIATA, MEData y datos.gov.co; lo que escribe es una redacción de lo que esas funciones devolvieron, con sus citas.`,
         `Cada respuesta cita el conjunto, el campo y la fecha de corte, y puedes verificarla con el botón “Ver la misma respuesta sin IA”, que ejecuta la misma función sin el modelo. Si las dos cifras no coinciden, la que vale es la del modo directo.`,
-        `Sin clave de IA, SINAPSIS funciona completo en modo directo. La IA es un complemento declarado, no un requisito.`,
+        `Sin clave de IA, PULSO Medellín funciona completo en modo directo. La IA es un complemento declarado, no un requisito.`,
       ],
       citas: [citaCatalogo],
     },

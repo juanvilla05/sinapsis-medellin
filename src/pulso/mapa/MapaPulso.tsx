@@ -247,6 +247,10 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         if (motorRef.current && estadoMapa === "listo") motorRef.current.fijarRecorrido(e.activo);
         else recorridoPendiente.current = e.activo;
         break;
+      case "vista-inicial":
+        setSel(null);
+        motorRef.current?.vistaInicial();
+        break;
     }
   });
   useEffect(() => escuchar((e) => alEvento(e), ["rutas"]), []);
@@ -361,7 +365,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     const corteAire = snap
       ? snap.guardado
         ? `copia guardada del ${fechaHoraBogota(snap.capturado) ?? "—"}`
-        : `última lectura ${horaBogota(snap.lectura) ?? "—"}`
+        : `lectura de las ${horaBogota(snap.lectura) ?? "—"}`
       : null;
     const fRej = (c: CapaRejilla): InfoCapa => {
       const r = rejillasMapa[c];
@@ -409,8 +413,8 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
 
   const pildora = aire.datos
     ? aire.datos.guardado
-      ? `Copia guardada del ${fechaHoraBogota(aire.datos.capturado) ?? "—"}`
-      : `SIATA · última lectura ${horaBogota(aire.datos.lectura) ?? "—"}`
+      ? `Dato guardado · ${fechaHoraBogota(aire.datos.capturado) ?? "—"}`
+      : `SIATA · ${horaBogota(aire.datos.lectura) ?? "—"}`
     : null;
 
   const alternarRecorrido = () => motorRef.current?.fijarRecorrido(!recorrido.girando);
@@ -499,7 +503,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       <div className="absolute bottom-8 left-4 z-10 hidden max-h-[calc(100dvh-250px)] w-[300px] md:flex">
         <PanelCapas {...propsCapas} leyendas={leyendas} />
       </div>
-      <div className="absolute bottom-3 left-3 right-[76px] z-10 md:hidden">
+      <div className="absolute bottom-3 left-3 right-3 z-10 md:hidden">
         <ChipsCapas {...propsCapas} leyendas={leyendasCompactas} foco={enFoco} />
       </div>
 

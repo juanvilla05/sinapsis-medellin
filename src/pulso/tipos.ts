@@ -50,4 +50,7 @@ export type EventoPulso =
   | { tipo: "capa"; capa: CapaPulso; visible: boolean }
   | { tipo: "panel"; panel: "rutas" | "bot" | null }
   | { tipo: "preguntar"; texto: string }
-  | { tipo: "recorrido"; activo: boolean };
+  | { tipo: "recorrido"; activo: boolean }
+  | { tipo: "vista-inicial" }
+  | { tipo: "tema"; tema: TemaPulso }
+  | { tipo: "navegar"; ruta: string };

@@ -3,30 +3,29 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PanelAnalista, { type OrigenResultado } from "@/mundo/paneles/PanelAnalista";
 import { emitir, escuchar } from "../bus";
-import { accionesMapa, resumenParaVoz } from "./acciones";
+import { accionesMapa, mueveElMapa, resumenParaVoz } from "./acciones";
+import LogoPulsoBot, { type EstadoBot } from "./LogoPulsoBot";
 import { SUGERIDAS_BOT } from "./sugeridas";
 import { useDictado, useLectura } from "./voz";
 
-type EstadoIa = "detectando" | "si" | "no";
-
 const foco = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#60A5FA]";
+/** silencios seguidos antes de pausar la conversación (cada escucha dura unos 7 s en el navegador) */
+const MAX_SILENCIOS = 3;
 
-/** Orbe de PULSO: gradiente con latido (el anillo se oculta con prefers-reduced-motion). */
-function Orbe({ tam = "h-12 w-12", latido = true }: { tam?: string; latido?: boolean }) {
+function IconoMicrofono({ clase = "h-5 w-5" }: { clase?: string }) {
   return (
-    <span className={`relative flex flex-none items-center justify-center ${tam}`} aria-hidden="true">
-      {latido && <span className="absolute inset-0 animate-ping rounded-full bg-[#38BDF8]/40 [animation-duration:2.4s] motion-reduce:hidden" />}
-      <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_30%,#7DD3FC,#2563EB_55%,#1E3A8A)] shadow-[0_0_24px_rgba(56,189,248,.55)]" />
-      <span className="relative h-1/3 w-1/3 rounded-full bg-white/85 motion-safe:animate-pulse" />
-    </span>
+    <svg viewBox="0 0 24 24" className={clase} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
   );
 }
 
-function IconoMicrofono() {
+function IconoAltavoz({ encendido }: { encendido: boolean }) {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+      <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z" />
+      {encendido ? <path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" /> : <path d="M16 9.5l5 5M21 9.5l-5 5" />}
     </svg>
   );
 }
@@ -42,59 +41,140 @@ function IconoCerrar() {
 function Bienvenida() {
   return (
     <div className="rounded-2xl border border-tinta/10 bg-tinta/[0.04] p-4">
-      <p className="m-0 text-[15px] font-semibold text-tinta">Hola, soy PulsoBot.</p>
-      <p className="m-0 mt-1 text-[13.5px] leading-relaxed text-tinta/75">
-        Pregúntame por el aire, la seguridad vial o el hurto en Medellín. Te respondo con la cifra y su fuente (SIATA, MEData, Policía Nacional) y te lo
-        muestro en el mapa.
-      </p>
+      <p className="m-0 text-[16px] font-bold text-tinta">Hola, soy PulsoBot.</p>
+      <p className="m-0 mt-1 text-[14px] leading-relaxed text-tinta/80">Pregúntame por Medellín: el aire, las vías, el hurto o cómo llegar. Puedes escribirme o hablarme.</p>
     </div>
   );
 }
 
+/** Barras que se mueven mientras PulsoBot escucha o habla. */
+function Ondas({ activo }: { activo: boolean }) {
+  return (
+    <span className="flex h-5 items-center gap-[3px]" aria-hidden="true">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span
+          key={i}
+          className={`w-[3px] rounded-full bg-current ${activo ? "motion-safe:animate-pulse" : ""}`}
+          style={{ height: activo ? `${[55, 100, 70, 90, 45][i]}%` : "25%", animationDelay: `${i * 120}ms`, animationDuration: "700ms" }}
+        />
+      ))}
+    </span>
+  );
+}
+
 /**
- * PulsoBot: el Analista de SINAPSIS flotando sobre el mapa, con voz y acciones sobre el mapa.
- * Se coordina con el resto de PULSO solo por el bus: escucha 'panel' y 'preguntar'; emite 'panel', 'capa',
- * 'comuna', 'estacion' y 'rutas' con los datos de cada respuesta.
+ * PulsoBot: el asistente de PULSO Medellín. Flota sobre el mapa, responde con datos y su fuente, mueve el mapa y
+ * maneja la plataforma. Con "Conversar" se habla de corrido: escucha, responde en voz alta y vuelve a escuchar.
+ * Se coordina con el resto de PULSO solo por el bus.
  */
 export default function PulsoBot() {
   const [abierto, setAbierto] = useState(false);
-  const [montado, setMontado] = useState(false); // el Analista se monta al primer uso y se conserva al cerrar
+  const [montado, setMontado] = useState(false); // el panel se monta al primer uso y se conserva al cerrar
   const [rutasAbiertas, setRutasAbiertas] = useState(false);
   const [minimizado, setMinimizado] = useState(false); // solo en móvil: deja ver el mapa tras una acción
   const [pregunta, setPregunta] = useState<{ id: number; texto: string } | undefined>(undefined);
   const [aviso, setAviso] = useState<{ id: number; texto: string } | null>(null);
-  const [ia, setIa] = useState<EstadoIa>("detectando");
+  const [conversando, setConversando] = useState(false);
+  const [pensando, setPensando] = useState(false);
+  const [pausada, setPausada] = useState(false);
   const contador = useRef(0);
-  const orbeRef = useRef<HTMLButtonElement>(null);
+  const botonRef = useRef<HTMLButtonElement>(null);
   const cerrarRef = useRef<HTMLButtonElement>(null);
   const cajonRef = useRef<HTMLElement>(null);
   const volverRef = useRef<HTMLButtonElement>(null);
+  const conversandoRef = useRef(false);
+  const pensandoRef = useRef(false);
+  const silencios = useRef(0);
+  const reanudar = useRef<number | undefined>(undefined);
+  const escucharRef = useRef<() => void>(() => {});
 
-  const lectura = useLectura();
-  const { callar } = lectura;
-
-  const enviar = useCallback((texto: string) => {
-    const t = texto.trim();
-    if (!t) return;
-    contador.current += 1;
-    setPregunta({ id: contador.current, texto: t });
-    setMinimizado(false);
-    setMontado(true);
+  const marcarPensando = useCallback((v: boolean) => {
+    pensandoRef.current = v;
+    setPensando(v);
   }, []);
 
-  const dictado = useDictado(enviar);
+  const enviar = useCallback(
+    (texto: string) => {
+      const t = texto.trim();
+      if (!t) return;
+      contador.current += 1;
+      setPregunta({ id: contador.current, texto: t });
+      setMinimizado(false);
+      setMontado(true);
+      if (conversandoRef.current) marcarPensando(true);
+    },
+    [marcarPensando],
+  );
 
-  // ¿Hay IA en esta instalación? (mismo endpoint que usa el Analista)
+  // Cuando PulsoBot termina de hablar en conversación, vuelve a escuchar.
+  const lectura = useLectura(
+    useCallback(() => {
+      if (conversandoRef.current) {
+        silencios.current = 0;
+        escucharRef.current();
+      }
+    }, []),
+  );
+  const { leer, callar, hablandoRef } = lectura;
+
+  const dictado = useDictado(
+    useCallback(
+      (texto: string) => {
+        silencios.current = 0;
+        enviar(texto);
+      },
+      [enviar],
+    ),
+    useCallback(
+      (codigo: string | null) => {
+        if (!conversandoRef.current || pensandoRef.current || hablandoRef.current) return;
+        // sin permiso de micrófono no hay conversación posible
+        if (codigo === "not-allowed" || codigo === "service-not-allowed" || codigo === "audio-capture") {
+          conversandoRef.current = false;
+          setConversando(false);
+          return;
+        }
+        silencios.current += 1;
+        if (silencios.current >= MAX_SILENCIOS) setPausada(true);
+        else escucharRef.current();
+      },
+      [hablandoRef],
+    ),
+  );
+  const { iniciar: iniciarDictado, cancelar: cancelarDictado } = dictado;
+
   useEffect(() => {
-    const ctrl = new AbortController();
-    fetch("/api/analista", { cache: "no-store", signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((j: { ia?: boolean }) => setIa(j.ia ? "si" : "no"))
-      .catch(() => {
-        if (!ctrl.signal.aborted) setIa("no");
-      });
-    return () => ctrl.abort();
-  }, []);
+    escucharRef.current = () => {
+      setPausada(false);
+      iniciarDictado();
+    };
+  }, [iniciarDictado]);
+
+  const terminarConversacion = useCallback(() => {
+    conversandoRef.current = false;
+    setConversando(false);
+    setPausada(false);
+    marcarPensando(false);
+    window.clearTimeout(reanudar.current);
+    cancelarDictado();
+    callar();
+  }, [callar, cancelarDictado, marcarPensando]);
+
+  const iniciarConversacion = useCallback(() => {
+    conversandoRef.current = true;
+    silencios.current = 0;
+    setConversando(true);
+    setMontado(true);
+    callar();
+    escucharRef.current();
+  }, [callar]);
+
+  /** Interrumpe lo que esté diciendo y vuelve a escuchar. */
+  const interrumpir = useCallback(() => {
+    callar();
+    silencios.current = 0;
+    escucharRef.current();
+  }, [callar]);
 
   // Bus: el shell abre/cierra paneles; cualquiera puede pedir una pregunta.
   useEffect(
@@ -107,7 +187,8 @@ export default function PulsoBot() {
           if (esBot) setMontado(true);
           else {
             setMinimizado(false);
-            callar();
+            // PulsoBot puede abrir el planificador de rutas sin cortar la conversación
+            if (!(e.panel === "rutas" && conversandoRef.current)) terminarConversacion();
           }
         } else if (e.tipo === "preguntar") {
           if (!e.texto.trim()) return;
@@ -115,17 +196,17 @@ export default function PulsoBot() {
           emitir({ tipo: "panel", panel: "bot" });
         }
       }),
-    [enviar, callar],
+    [enviar, terminarConversacion],
   );
 
   const cerrar = useCallback(() => emitir({ tipo: "panel", panel: null }), []);
 
-  // Foco: al abrir va al botón de cerrar; al cerrar vuelve al orbe si el foco estaba en el cajón.
+  // Foco: al abrir va al botón de cerrar; al cerrar vuelve al botón flotante si el foco estaba en el cajón.
   const abiertoAntes = useRef(false);
   useEffect(() => {
     if (abierto && !abiertoAntes.current) cerrarRef.current?.focus({ preventScroll: true });
     if (!abierto && abiertoAntes.current && (!document.activeElement || document.activeElement === document.body || cajonRef.current?.contains(document.activeElement)))
-      orbeRef.current?.focus({ preventScroll: true });
+      botonRef.current?.focus({ preventScroll: true });
     abiertoAntes.current = abierto;
   }, [abierto]);
 
@@ -153,79 +234,95 @@ export default function PulsoBot() {
     return () => clearTimeout(t);
   }, [aviso]);
 
-  const { leer } = lectura;
+  useEffect(() => () => window.clearTimeout(reanudar.current), []);
+
+  /** PulsoBot habla: en conversación primero deja de escuchar, para no oírse a sí mismo. */
+  const decir = useCallback(
+    (texto: string) => {
+      if (conversandoRef.current) {
+        window.clearTimeout(reanudar.current);
+        cancelarDictado();
+      }
+      leer(texto, conversandoRef.current);
+    },
+    [cancelarDictado, leer],
+  );
+
   const alResultado = useCallback(
     (herramienta: string, respuesta: unknown, origen?: OrigenResultado) => {
       const eventos = accionesMapa(herramienta, respuesta);
       if (eventos.length > 0) {
         for (const e of eventos) emitir(e);
-        contador.current += 1;
-        setAviso({ id: contador.current, texto: "Te lo muestro en el mapa" });
-        setMinimizado(true);
+        if (mueveElMapa(eventos)) {
+          contador.current += 1;
+          setAviso({ id: contador.current, texto: "Te lo muestro en el mapa" });
+          setMinimizado(true);
+        }
       }
       if (origen === "directo") {
         const r = resumenParaVoz(herramienta, respuesta);
-        if (r) leer(r);
+        if (r) decir(r);
       }
     },
-    [leer],
+    [decir],
   );
 
-  const etiquetaIa = ia === "si" ? "IA" : ia === "no" ? "modo directo" : "…";
-  const descripcionIa = ia === "si" ? "con IA" : ia === "no" ? "en modo directo, sin IA" : "detectando si hay IA";
+  const alTextoIa = useCallback((texto: string) => decir(texto), [decir]);
 
-  const microfono = dictado.soportado ? (
+  // Cada respuesta terminada: si no hay nada que decir en voz alta, la conversación vuelve a escuchar.
+  const alRespuesta = useCallback(() => {
+    marcarPensando(false);
+    if (!conversandoRef.current) return;
+    window.clearTimeout(reanudar.current);
+    reanudar.current = window.setTimeout(() => {
+      if (conversandoRef.current && !hablandoRef.current && !pensandoRef.current) escucharRef.current();
+    }, 700);
+  }, [hablandoRef, marcarPensando]);
+
+  const estadoBot: EstadoBot = dictado.escuchando ? "escuchando" : lectura.hablando ? "hablando" : pensando ? "pensando" : "reposo";
+  const textoEstado = pausada
+    ? "Sigo aquí. Toca para seguir hablando."
+    : dictado.escuchando
+      ? dictado.parcial || "Te escucho…"
+      : lectura.hablando
+        ? "Te estoy respondiendo…"
+        : pensando
+          ? "Estoy consultando los datos…"
+          : "Un momento…";
+
+  const botonConversar = dictado.soportado ? (
     <button
       type="button"
-      onClick={dictado.escuchando ? dictado.detener : dictado.iniciar}
-      aria-pressed={dictado.escuchando}
-      aria-label={dictado.escuchando ? "Detener el dictado" : "Dictar la pregunta por voz"}
-      title={dictado.escuchando ? "Detener el dictado" : "Dictar la pregunta por voz"}
+      onClick={conversando ? terminarConversacion : iniciarConversacion}
+      aria-pressed={conversando}
+      aria-label={conversando ? "Terminar la conversación por voz" : "Conversar por voz con PulsoBot"}
+      title={conversando ? "Terminar la conversación" : "Conversar por voz"}
       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${foco} ${
-        dictado.escuchando ? "border-[#F87171] bg-[#B91C1C] text-tinta motion-safe:animate-pulse" : "border-tinta/15 bg-tinta/[0.06] text-tinta hover:bg-tinta/10"
+        conversando ? "border-[#22C55E] bg-[#16A34A] text-white" : "border-tinta/15 bg-tinta/[0.06] text-tinta hover:bg-tinta/10"
       }`}
     >
       <IconoMicrofono />
     </button>
   ) : null;
 
-  const estadoVoz = dictado.escuchando
-    ? "Escuchando… habla y haré la pregunta al terminar."
-    : lectura.hablando
-      ? "Leyendo la respuesta en voz alta…"
-      : (dictado.error ?? null);
-
   return (
     <>
       {/* Botón flotante */}
       <button
-        ref={orbeRef}
+        ref={botonRef}
         type="button"
         onClick={() => emitir({ tipo: "panel", panel: "bot" })}
-        aria-label={`Pregúntale a PULSO: abre PulsoBot, ${descripcionIa}`}
+        aria-label="Abrir PulsoBot, el asistente de PULSO Medellín"
         aria-expanded={abierto}
         aria-controls="pulsobot-cajon"
-        className={`absolute right-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-30 items-center gap-3 rounded-full border border-tinta/15 bg-fondo/85 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,.45)] backdrop-blur transition-colors hover:border-[#60A5FA]/60 sm:right-6 sm:bottom-8 sm:pr-5 ${foco} ${
+        className={`absolute right-3 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.25rem)] z-30 items-center gap-2.5 rounded-full border border-tinta/15 bg-fondo/90 p-1.5 pr-4 shadow-[0_10px_40px_rgba(0,0,0,.45)] backdrop-blur transition-colors hover:border-[#60A5FA]/60 sm:right-6 sm:bottom-8 sm:gap-3 sm:pr-5 ${foco} ${
           abierto || rutasAbiertas ? "hidden" : "flex"
         }`}
       >
-        <span className="relative">
-          <Orbe />
-          <span
-            aria-hidden="true"
-            className={`absolute -top-1.5 -left-2 rounded-full px-1.5 py-px text-[10px] font-bold sm:hidden ${
-              ia === "si" ? "bg-[#16A34A] text-white" : ia === "no" ? "bg-[#FBBF24] text-[#0B1220]" : "bg-tinta/20 text-tinta"
-            }`}
-          >
-            {ia === "no" ? "directo" : etiquetaIa}
-          </span>
-        </span>
-        <span className="hidden flex-col items-start leading-tight sm:flex">
-          <span className="text-[14px] font-bold text-tinta">Pregúntale a PULSO</span>
-          <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-tinta/70" aria-hidden="true">
-            <span className={`h-2 w-2 rounded-full ${ia === "si" ? "bg-[#22C55E]" : ia === "no" ? "bg-[#FBBF24]" : "bg-tinta/40"}`} />
-            {ia === "si" ? "con IA" : ia === "no" ? "modo directo" : "conectando…"}
-          </span>
+        <LogoPulsoBot tam="h-11 w-11 sm:h-12 sm:w-12" estado={estadoBot} />
+        <span className="flex flex-col items-start leading-tight">
+          <span className="text-[15px] font-extrabold text-tinta">PulsoBot</span>
+          <span className="hidden text-[12.5px] text-tinta/70 sm:block">Háblame o escríbeme</span>
         </span>
       </button>
 
@@ -236,28 +333,34 @@ export default function PulsoBot() {
         role="dialog"
         aria-modal="false"
         aria-labelledby="pulsobot-titulo"
-        aria-describedby="pulsobot-subtitulo"
         className={`absolute inset-0 z-40 flex-col overflow-hidden bg-fondo text-tinta sm:inset-auto sm:top-[76px] sm:right-0 sm:bottom-0 sm:w-[420px] sm:rounded-tl-3xl sm:border-t sm:border-l sm:border-tinta/10 sm:shadow-[-20px_0_60px_rgba(0,0,0,.45)] ${
           abierto ? "flex" : "hidden"
         } ${minimizado ? "max-sm:hidden" : ""}`}
       >
-        <header className="flex shrink-0 items-start gap-3 border-b border-tinta/10 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
-          <Orbe tam="h-9 w-9" latido={false} />
+        <header className="flex shrink-0 items-center gap-3 border-b border-tinta/10 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+          <LogoPulsoBot tam="h-11 w-11" estado={estadoBot} latido={false} />
           <div className="min-w-0 flex-1">
-            <h2 id="pulsobot-titulo" className="m-0 flex flex-wrap items-center gap-2 text-[16px] font-extrabold tracking-wide">
+            <h2 id="pulsobot-titulo" className="m-0 text-[17px] font-extrabold">
               PulsoBot
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-normal ${
-                  ia === "si" ? "bg-[#16A34A]/20 text-[#86EFAC]" : ia === "no" ? "bg-[#FBBF24]/15 text-[#FCD34D]" : "bg-tinta/10 text-tinta/70"
-                }`}
-              >
-                {ia === "si" ? "IA" : ia === "no" ? "modo directo" : "detectando…"}
-              </span>
             </h2>
-            <p id="pulsobot-subtitulo" className="m-0 mt-0.5 text-[12px] text-tinta/70">
-              disponible 24/7 · cada cifra con su fuente
-            </p>
+            <p className="m-0 text-[13px] text-tinta/70">Tu asistente de PULSO Medellín</p>
           </div>
+          {lectura.soportada && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lectura.activa || conversando}
+              aria-label="Leer las respuestas en voz alta"
+              title={lectura.activa || conversando ? "Voz activada" : "Voz desactivada"}
+              disabled={conversando}
+              onClick={() => lectura.setActiva(!lectura.activa)}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${foco} ${
+                lectura.activa || conversando ? "bg-[#2563EB] text-white" : "text-tinta/70 hover:bg-tinta/10 hover:text-tinta"
+              }`}
+            >
+              <IconoAltavoz encendido={lectura.activa || conversando} />
+            </button>
+          )}
           <button
             ref={cerrarRef}
             type="button"
@@ -269,58 +372,71 @@ export default function PulsoBot() {
           </button>
         </header>
 
-        {(lectura.soportada || estadoVoz || aviso) && (
-          <div className="flex shrink-0 flex-col gap-2 border-b border-tinta/10 px-4 py-2.5">
-            {lectura.soportada && (
-              <div className="flex items-center justify-between gap-3">
-                <span id="pulsobot-voz" className="text-[12.5px] text-tinta/80">
-                  Leer respuestas en voz alta
-                </span>
-                <div className="flex items-center gap-2">
-                  {lectura.hablando && (
-                    <button type="button" onClick={callar} className={`rounded-lg px-2 py-1 text-[12px] font-semibold text-[#93C5FD] hover:bg-tinta/10 ${foco}`}>
-                      Callar
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={lectura.activa}
-                    aria-labelledby="pulsobot-voz"
-                    onClick={() => lectura.setActiva(!lectura.activa)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${foco} ${lectura.activa ? "bg-[#2563EB]" : "bg-tinta/20"}`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform motion-reduce:transition-none ${lectura.activa ? "translate-x-5" : ""}`}
-                    />
-                  </button>
-                </div>
+        {/* Conversación por voz: un solo botón grande para empezar; mientras dura, el estado y cómo interrumpir. */}
+        {dictado.soportado && (
+          <div className="shrink-0 border-b border-tinta/10 px-4 py-3">
+            {!conversando ? (
+              <button
+                type="button"
+                onClick={iniciarConversacion}
+                className={`flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2563EB] px-4 py-3 text-[15px] font-bold text-white hover:bg-[#1D4ED8] ${foco}`}
+              >
+                <IconoMicrofono />
+                Conversar por voz
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={pausada ? () => escucharRef.current() : lectura.hablando ? interrumpir : undefined}
+                  disabled={!pausada && !lectura.hablando}
+                  aria-label={pausada ? "Seguir hablando" : lectura.hablando ? "Interrumpir a PulsoBot y hablar" : "PulsoBot te está escuchando"}
+                  className={`flex min-w-0 flex-1 items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left ${foco} ${
+                    dictado.escuchando
+                      ? "border-[#22C55E]/60 bg-[#22C55E]/10 text-[#86EFAC]"
+                      : lectura.hablando
+                        ? "border-[#60A5FA]/60 bg-[#2563EB]/15 text-[#93C5FD] hover:bg-[#2563EB]/25"
+                        : "border-tinta/15 bg-tinta/[0.05] text-tinta/80"
+                  }`}
+                >
+                  <Ondas activo={dictado.escuchando || lectura.hablando} />
+                  <span className="min-w-0 flex-1" role="status" aria-live="polite">
+                    <span className="block truncate text-[14px] font-semibold text-tinta">{textoEstado}</span>
+                    {lectura.hablando && <span className="block text-[12.5px] text-tinta/70">Toca para interrumpir</span>}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={terminarConversacion}
+                  className={`shrink-0 rounded-xl border border-tinta/15 px-3 py-2.5 text-[13.5px] font-bold text-tinta hover:bg-tinta/10 ${foco}`}
+                >
+                  Terminar
+                </button>
               </div>
             )}
-            <div role="status" aria-live="polite" className="flex flex-col gap-1 empty:hidden">
-              {estadoVoz && <p className="m-0 text-[12.5px] text-[#FCD34D]">{estadoVoz}</p>}
-              {aviso && (
-                <p key={aviso.id} className="m-0 flex items-center gap-2 text-[12.5px] font-semibold text-[#86EFAC]">
-                  <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#22C55E]" />
-                  {aviso.texto}
-                </p>
-              )}
-            </div>
+            {dictado.error && !conversando && <p className="m-0 mt-2 text-[13px] text-[#FCD34D]">{dictado.error}</p>}
           </div>
+        )}
+
+        {aviso && (
+          <p key={aviso.id} role="status" className="m-0 flex shrink-0 items-center gap-2 border-b border-tinta/10 px-4 py-2 text-[13px] font-semibold text-[#86EFAC]">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#22C55E]" />
+            {aviso.texto}
+          </p>
         )}
 
         <div className="min-h-0 flex-1">
           {montado && (
             <PanelAnalista
               modo="flotante"
+              onRespuesta={alRespuesta}
               onResultado={alResultado}
-              onTextoIa={leer}
+              onTextoIa={alTextoIa}
               pregunta={pregunta}
               sugeridasExtra={SUGERIDAS_BOT}
               bienvenida={<Bienvenida />}
               borrador={dictado.parcial}
-              accesorioEntrada={microfono}
+              accesorioEntrada={botonConversar}
             />
           )}
         </div>
@@ -328,18 +444,18 @@ export default function PulsoBot() {
 
       {/* Móvil: tras mover el mapa, el cajón se minimiza a esta barra para que se vea el mapa. */}
       {abierto && minimizado && (
-        <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-2xl border border-tinta/15 bg-fondo/95 p-2 pl-3 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur sm:hidden">
-          <span aria-hidden="true" className="h-2.5 w-2.5 flex-none rounded-full bg-[#22C55E]" />
-          <p className="m-0 min-w-0 flex-1 text-[13px] leading-tight font-semibold text-tinta" role="status">
-            Te lo muestro en el mapa
+        <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-2xl border border-tinta/15 bg-fondo/95 p-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur sm:hidden">
+          <LogoPulsoBot tam="h-10 w-10" estado={estadoBot} latido={false} />
+          <p className="m-0 min-w-0 flex-1 truncate text-[14px] leading-tight font-semibold text-tinta" role="status">
+            {conversando ? textoEstado : "Te lo muestro en el mapa"}
           </p>
           <button
             ref={volverRef}
             type="button"
             onClick={() => setMinimizado(false)}
-            className={`shrink-0 rounded-xl bg-[#2563EB] px-3 py-2 text-[13px] font-bold text-tinta hover:bg-[#1D4FD7] ${foco}`}
+            className={`shrink-0 rounded-xl bg-[#2563EB] px-3 py-2 text-[13.5px] font-bold text-white hover:bg-[#1D4FD7] ${foco}`}
           >
-            Volver al chat
+            Abrir
           </button>
           <button
             type="button"

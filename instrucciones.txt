@@ -1,5 +1,5 @@
-INSTRUCCIONES - SINAPSIS · Centro de Inteligencia de Datos de Medellín (con PULSO · la ciudad en vivo)
-Equipo: SINAPSIS (Isabela Zuluaga y Juan Camilo Villa) · Hackathon de Datos ITM 2026
+INSTRUCCIONES - PULSO Medellín · la ciudad en vivo, con datos abiertos
+Equipo: PULSO Medellín (Isabela Zuluaga y Juan Camilo Villa) · Hackathon de Datos ITM 2026
 Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsis-medellin
 
 1. QUÉ ES
@@ -24,8 +24,9 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    npm install
    npm run dev
    Abrir http://localhost:3000
-   Opcional: copiar .env.example a .env.local y poner GOOGLE_GENERATIVE_AI_API_KEY (chat con Gemini)
-   y GOOGLE_ROUTES_API_KEY + GOOGLE_PLACES_API_KEY (rutas). Sin estas claves el planificador de rutas
+   Opcional: copiar .env.example a .env.local y poner GOOGLE_GENERATIVE_AI_API_KEY (chat con Gemini),
+   GOOGLE_ROUTES_API_KEY + GOOGLE_PLACES_API_KEY (rutas) y ELEVENLABS_API_KEY (voz humana de PulsoBot;
+   sin ella usa la voz del navegador). Sin estas claves el planificador de rutas
    lo indica y todo lo demás sigue funcionando.
    Opcional (actualizar los datos guardados):
      npm run pipeline                      catálogo de MEData -> src/data/*.json
@@ -38,7 +39,7 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
       estaciones válidas en Medellín, PM2.5 promedio y la estación con el valor más alto.
    b) Panel "Capas" > "Incidentes viales": columnas de 250 m que crecen sobre la ciudad (MEData,
       corte 1 de septiembre de 2020). Clic en una columna, estación o comuna = tarjeta con la cifra.
-   c) Botón "Pregúntale a PULSO" > "¿Cómo está el aire en Medellín ahora?": respuesta con fuente y
+   c) Botón "PulsoBot" > "¿Cómo está el aire en Medellín ahora?" (o "Conversar por voz" y decirlo): respuesta con fuente y
       hora de lectura; el mapa vuela a la estación con el PM2.5 más alto y abre su tarjeta.
       "¿Cuántas muertes viales hubo en 2023 según MEData y la Policía?": 563 según la Policía,
       MEData sin publicar ese año, con conjunto, campo, licencia y fecha de corte.
@@ -79,7 +80,8 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
 6. USO DE IA
    - Claude (Anthropic): asistente de programación para escribir y depurar código, y Claude Design para
      el diseño visual del mundo 3D. El equipo revisó y puede explicar cada componente.
-   - Gemini 2.5 Flash (Google), opcional y solo con clave: en PulsoBot y el Analista interpreta la pregunta y
+   - ElevenLabs, opcional y solo con clave: lee en voz alta la respuesta de PulsoBot (texto a voz).
+   - Gemini 2.5 Flash (Google), opcional y solo con clave: en PulsoBot interpreta la pregunta y
      elige una herramienta. No genera cifras: todas salen de funciones deterministas sobre las fuentes
      de la sección 5. Sin clave, las mismas herramientas responden en modo directo.
 

@@ -1,4 +1,4 @@
-# SINAPSIS · Centro de Inteligencia de Datos de Medellín
+# PULSO Medellín · la ciudad en vivo, con datos abiertos
 
 Agentes que auditan, limpian y explican **en vivo** los datos abiertos de [MEData](https://medata.app.medellin.gov.co/), el portal de datos abiertos de la Alcaldía de Medellín.
 
@@ -17,7 +17,7 @@ En línea: **https://pulsomedellin.com** · Repositorio de entrega: [juanvilla05
 La portada es un **mapa 3D de Medellín** (MapLibre + deck.gl sobre OpenFreeMap, sin claves): faros de SIATA con el PM2.5 en vivo, columnas de 250 m de incidentes, víctimas y hurto de MEData, y comunas oficiales. Encima flotan:
 
 - **Rutas inteligentes**: Google Routes calcula las alternativas y PULSO las compara por aire (SIATA) y siniestralidad histórica (MEData).
-- **PulsoBot**: el Analista con voz, disponible 24/7; responde citando la fuente y mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta).
+- **PulsoBot**: el asistente, disponible 24/7. Se le escribe o se conversa con él por voz de corrido; responde con la cifra y su fuente, mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta) y maneja la plataforma (capas, tema, recorrido, secciones). Sin IA entiende las preguntas con un intérprete propio.
 
 ## La Alpujarra 3D (`/alpujarra`)
 

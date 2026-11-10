@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, getToolName, isToolUIPart } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Respuesta as RespuestaHerramienta } from "@/lib/analista/herramientas";
+import { interpretar } from "@/lib/analista/interprete";
 import { NOMBRES_HERRAMIENTAS, SUGERIDAS, type NombreHerramienta, type Sugerida } from "@/lib/analista/sugeridas";
 import AvisoRespuesta from "./analista/AvisoRespuesta";
 import Mensaje, { Burbuja, Consultando, esRespuesta } from "./analista/Mensaje";
@@ -194,6 +195,7 @@ export default function PanelAnalista({
       setDirectos((ds) => ds.map((d) => (d.id === id ? { ...d, estado: "listo", respuesta, aviso } : d)));
       onRespuestaRef.current?.();
       if (respuesta?.ok) onResultadoRef.current?.(herramienta, respuesta, "directo");
+      else onTextoIaRef.current?.(respuesta && !respuesta.ok ? respuesta.detalle : (aviso?.detalle ?? "No pude completar la consulta. Intenta de nuevo."));
     },
     [],
   );
@@ -231,8 +233,8 @@ export default function PanelAnalista({
   function avisarSinIa(pregunta: string) {
     const id = ++contador.current;
     const detalle = iaCaida
-      ? "La IA no está respondiendo ahora. Mientras tanto respondo en modo directo las preguntas sugeridas, con las mismas herramientas y citas: elige una de la lista."
-      : "Esta instalación no tiene clave de IA. En modo directo respondo las preguntas sugeridas, con las mismas herramientas y citas: elige una de la lista.";
+      ? "No te entendí del todo y la IA no está respondiendo ahora. Pregúntame por el aire, los incidentes viales, el hurto por comuna, una ruta de un lugar a otro o los datos atrasados."
+      : "No te entendí del todo. Pregúntame por el aire, los incidentes viales, el hurto por comuna, una ruta de un lugar a otro o los datos atrasados.";
     setDirectos((ds) => [
       ...ds,
       {
@@ -247,6 +249,8 @@ export default function PanelAnalista({
         despuesDe: messagesRef.current,
       },
     ]);
+    onRespuestaRef.current?.();
+    onTextoIaRef.current?.(detalle);
   }
 
   function preguntar(pregunta: string, sugerida?: Sugerida, externa = false) {
@@ -257,13 +261,15 @@ export default function PanelAnalista({
       const n = normalizar(limpio);
       sugerida = todasSugeridas.find((s) => normalizar(s.texto) === n);
     }
-    if (externa && !puedeIa && !sugerida) {
+    // Sin sugerida: el intérprete reconoce la intención por palabras clave (sirve sin IA y como respaldo si la IA falla).
+    const intencion = sugerida ? null : interpretar(limpio);
+    if ((externa || flotante) && !puedeIa && !sugerida && !intencion) {
       setTexto("");
       avisarSinIa(limpio);
       return;
     }
-    const herramienta: NombreHerramienta = sugerida?.herramienta ?? "buscarConjunto";
-    const args = sugerida?.args ?? { texto: limpio.slice(0, 80) };
+    const herramienta: NombreHerramienta = sugerida?.herramienta ?? intencion?.herramienta ?? "buscarConjunto";
+    const args = sugerida?.args ?? intencion?.args ?? { texto: limpio.slice(0, 80) };
     setTexto("");
     if (puedeIa) {
       ultimaIntencion.current = { pregunta: limpio, herramienta, args };
@@ -301,7 +307,7 @@ export default function PanelAnalista({
             <p className="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-tinta">{d.pregunta}</p>
           </Burbuja>
           <Burbuja rol="assistant" oscuro={flotante}>
-            {d.sinIa && d.aviso && <AvisoRespuesta motivo="sin-clave" titulo="Sin IA respondo las preguntas sugeridas" detalle={d.aviso.detalle} compacto />}
+            {d.sinIa && d.aviso && <AvisoRespuesta motivo="sin-clave" titulo="¿Me lo dices de otra forma?" detalle={d.aviso.detalle} compacto />}
             {!d.sinIa && d.estado === "cargando" && <Consultando nombre={NOMBRES_HERRAMIENTAS[d.herramienta]} oscuro={flotante} />}
             {!d.sinIa && d.estado === "listo" && d.aviso && (
               <AvisoRespuesta
@@ -318,10 +324,8 @@ export default function PanelAnalista({
               />
             )}
             {d.estado === "listo" && d.respuesta && d.respuesta.ok && <Respuesta herramienta={d.herramienta} respuesta={d.respuesta} />}
-            {!d.sinIa && (
-              <span className={`font-mono text-[11px] ${flotante ? "text-tinta/60" : "text-[#64748B]"}`}>
-                Modo directo · sin modelo de lenguaje · {NOMBRES_HERRAMIENTAS[d.herramienta]}
-              </span>
+            {!d.sinIa && !flotante && (
+              <span className="font-mono text-[11px] text-[#64748B]">Modo directo · sin modelo de lenguaje · {NOMBRES_HERRAMIENTAS[d.herramienta]}</span>
             )}
           </Burbuja>
         </div>,
@@ -329,7 +333,7 @@ export default function PanelAnalista({
     for (let i = 0; i <= messages.length; i++) {
       directos.filter((d) => d.despuesDe === i).forEach(pintarDirecto);
       const m = messages[i];
-      if (m) items.push(<Mensaje key={m.id} mensaje={m} oscuro={flotante} onVerSinIA={(h, a) => ejecutarDirecto(`Ver sin IA: ${NOMBRES_HERRAMIENTAS[h]}`, h, a)} />);
+      if (m) items.push(<Mensaje key={m.id} mensaje={m} oscuro={flotante} onVerSinIA={flotante ? undefined : (h, a) => ejecutarDirecto(`Ver sin IA: ${NOMBRES_HERRAMIENTAS[h]}`, h, a)} />);
     }
     directos.filter((d) => d.despuesDe > messages.length).forEach(pintarDirecto);
     return items;
@@ -429,8 +433,8 @@ export default function PanelAnalista({
         placeholder={
           flotante
             ? puedeIa
-              ? "Pregúntale a PULSO…"
-              : "Elige una sugerida o busca un conjunto…"
+              ? "Escribe o háblale a PulsoBot…"
+              : "Escribe o háblale a PulsoBot…"
             : puedeIa
               ? "Escribe tu pregunta…"
               : "Busca un conjunto por nombre, p. ej. “incidentes viales”…"
@@ -454,15 +458,19 @@ export default function PanelAnalista({
       >
         {ocupado ? (flotante ? "…" : "Consultando…") : flotante ? "Enviar" : puedeIa ? "Preguntar" : "Buscar"}
       </button>
+      {flotante && chatOcupado && (
+        <button type="button" onClick={stop} className="shrink-0 rounded-xl border border-tinta/15 px-3 py-2.5 text-sm font-semibold text-tinta/80 hover:bg-tinta/10">
+          Parar
+        </button>
+      )}
     </form>
   );
 
   if (flotante) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-fondo text-tinta">
-        {estado}
+        {/* PulsoBot: sin franja de estado ni avisos técnicos; si la IA no está, responde igual con el intérprete */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
-          {avisos}
           {conversacion}
           <Sugeridas
             onElegir={(s) => preguntar(s.texto, s)}

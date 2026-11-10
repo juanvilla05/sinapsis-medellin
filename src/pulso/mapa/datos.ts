@@ -59,11 +59,11 @@ export async function pedirJson<T extends { ok: boolean }>(url: string, senal?: 
 /* ───────── capas: textos ───────── */
 
 export const NOMBRE_CAPA: Record<CapaPulso, string> = {
-  aire: "Aire · PM2.5 en vivo",
+  aire: "Aire en vivo",
   incidentes: "Incidentes viales",
-  victimas: "Víctimas en incidentes viales",
+  victimas: "Víctimas viales",
   hurto: "Hurto a personas",
-  comunas: "Comunas y corregimientos",
+  comunas: "Comunas",
 };
 export const CORTO_CAPA: Record<CapaPulso, string> = {
   aire: "Aire",

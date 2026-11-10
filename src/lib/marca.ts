@@ -1,7 +1,7 @@
 /** Identidad del proyecto: cambiar aquí el nombre lo cambia en toda la app. */
 export const MARCA = {
-  nombre: "SINAPSIS",
-  subtitulo: "Centro de Inteligencia de Datos de Medellín",
+  nombre: "PULSO Medellín",
+  subtitulo: "La ciudad en vivo, con datos abiertos",
   lema: "Conectamos los datos de la ciudad como neuronas de un mismo cerebro.",
   equipo: ["Isabela Zuluaga", "Juan Camilo Villa"],
   institucion: "Institución Universitaria ITM",
