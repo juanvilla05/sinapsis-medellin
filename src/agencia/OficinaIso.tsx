@@ -296,7 +296,7 @@ export default function OficinaIso({
 
       {/* camino del flujo de datos */}
       <polyline points={flujo} fill="none" stroke="#BFDBFE" strokeWidth={9} strokeLinejoin="round" strokeLinecap="round" />
-      <polyline points={flujo} fill="none" stroke={AZUL} strokeWidth={2.4} strokeDasharray="8 6" strokeLinejoin="round" className="sinapsis-linea" />
+      <polyline points={flujo} fill="none" stroke={AZUL} strokeWidth={2.4} strokeDasharray="8 6" strokeLinejoin="round" className="pulso-linea" />
       <g transform={sobrePiso(8.6, 8.5)} pointerEvents="none">
         <text fontSize={9.5} fontWeight={700} fill="#64748B" fontFamily="var(--font-jetbrains), monospace" letterSpacing="0.08em">
           DATOS CRUDOS →

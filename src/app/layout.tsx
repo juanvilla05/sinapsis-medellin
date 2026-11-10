@@ -9,7 +9,7 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 export const metadata: Metadata = {
   title: { default: `${MARCA.nombre} · ${MARCA.subtitulo}`, template: `%s · ${MARCA.nombre}` },
   description:
-    "Mundo 3D donde agentes auditan, limpian y explican en vivo los datos abiertos de MEData para la ciudad de Medellín.",
+    "PULSO: Medellín en vivo y la Agencia de datos, donde agentes auditan, limpian y explican los datos abiertos de MEData.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

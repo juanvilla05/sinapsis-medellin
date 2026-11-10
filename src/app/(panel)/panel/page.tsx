@@ -3,17 +3,13 @@ import EscenaAlpujarra from "@/components/EscenaAlpujarra";
 import { DESPACHOS } from "@/lib/despachos";
 import { MARCA } from "@/lib/marca";
 import resumen from "@/data/resumen-catalogo.json";
+import { decimal, fechaColombia, miles } from "@/mundo/areas";
 
-const nf = new Intl.NumberFormat("es-CO");
+const nf = { format: miles };
 
 export default function Inicio() {
   const atrasados = resumen.porEstado.atrasado + resumen.porEstado.critico;
-  const fechaCorte = new Date(resumen.generado).toLocaleDateString("es-CO", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "America/Bogota",
-  });
+  const fechaCorte = fechaColombia(resumen.generado);
 
   return (
     <>
@@ -43,7 +39,7 @@ export default function Inicio() {
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--atrasado)]">Diagnóstico en vivo de MEData</p>
             <p className="mt-3 text-5xl font-extrabold text-white sm:text-6xl">
-              {nf.format(resumen.pctAtrasados)}%
+              {decimal(resumen.pctAtrasados)} %
             </p>
             <p className="mt-2 max-w-xl text-lg text-white/80">
               de los conjuntos de MEData con periodicidad declarada lleva más de 1,5 veces ese plazo sin actualizarse:{" "}
@@ -87,7 +83,7 @@ export default function Inicio() {
       {/* Despachos */}
       <section className="mx-auto max-w-7xl px-4 py-14" aria-labelledby="despachos-titulo">
         <h2 id="despachos-titulo" className="text-2xl font-extrabold text-white">
-          Los despachos de {MARCA.nombre}
+          Los despachos de la Agencia de datos
         </h2>
         <p className="mt-1 text-sm text-white/60">Cada despacho es una herramienta que trabaja con los datos reales de MEData.</p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

@@ -110,7 +110,7 @@ export default function Laboratorio({ opciones, destacados }: { opciones: Opcion
     const blob = new Blob(["﻿" + resp.informe.csvLimpio], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${resp.conjunto.id}_muestra_limpia_sinapsis.csv`;
+    a.download = `${resp.conjunto.id}_muestra_limpia_pulso.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   }

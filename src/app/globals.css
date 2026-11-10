@@ -80,7 +80,7 @@ body {
 .escena .despacho:focus-visible circle {
   stroke: #fff;
 }
-.sinapsis-linea {
+.pulso-linea {
   animation: flujo 1.6s linear infinite;
 }
 @keyframes flujo {
@@ -111,7 +111,7 @@ body {
   .bandera-ondea {
     animation: none;
   }
-  .sinapsis-linea {
+  .pulso-linea {
     animation: none;
   }
   .escena animate,

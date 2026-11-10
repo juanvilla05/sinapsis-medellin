@@ -1,5 +1,5 @@
 /**
- * Pipeline automático de SINAPSIS.
+ * Pipeline automático de PULSO (Agencia de datos).
  * Descarga MEData, audita y limpia, y escribe los resultados en src/data/.
  * Uso:  npm run pipeline            (todo)
  *       npm run pipeline catalogo   (solo auditoría del catálogo)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Agregados de la Sala de Monitoreo de SINAPSIS — solo biblioteca estándar de Python 3.
+Agregados de la Sala de Monitoreo de PULSO — solo biblioteca estándar de Python 3.
 
 Descarga desde la fuente (MEData, Alcaldía de Medellín) los CSV crudos de
   · Incidentes viales                (1-023-25-000094)
@@ -103,7 +103,7 @@ def ahora_iso() -> str:
 
 def descargar(url: str, destino: str) -> None:
     """Descarga `url` a `destino` siguiendo redirecciones (urllib las sigue por defecto)."""
-    peticion = urllib.request.Request(url, headers={"User-Agent": "SINAPSIS-Medellin/agregados.py (python-urllib)"})
+    peticion = urllib.request.Request(url, headers={"User-Agent": "PULSO-Medellin/agregados.py (python-urllib)"})
     with urllib.request.urlopen(peticion, timeout=120) as resp:
         if resp.status != 200:
             raise RuntimeError(f"HTTP {resp.status} al descargar {url}")

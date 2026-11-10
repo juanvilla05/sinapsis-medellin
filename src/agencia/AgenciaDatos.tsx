@@ -236,7 +236,7 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
             <Icono n="panel" className="h-4 w-4" /> Panel ejecutivo
           </Link>
           <p className="text-[10.5px] leading-snug text-white/40">
-            Equipo {MARCA.nombre} · {MARCA.evento}
+            {MARCA.nombre} · {MARCA.evento}
           </p>
         </div>
       </aside>
@@ -390,7 +390,7 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
           <footer className="flex flex-col gap-1 border-t border-[#E3EAF3] pt-4 text-center text-[11.5px] text-[#64748B]">
             <p>{MARCA.aviso}</p>
             <p>
-              Equipo {MARCA.nombre} · {MARCA.equipo.join(" y ")} · {MARCA.institucion}
+              {MARCA.nombre} · {MARCA.equipo.join(" y ")} · {MARCA.institucion}
             </p>
           </footer>
         </main>
