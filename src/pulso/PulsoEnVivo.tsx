@@ -68,8 +68,8 @@ export default function PulsoEnVivo() {
 PulsoBot
           </button>
           <Link href="/alpujarra" className={`${pill} shrink-0 text-tinta/80 hover:bg-tinta/10`}>
-            <span className="sm:hidden">Datos</span>
-            <span className="hidden sm:inline">Calidad de datos</span>
+            <span className="sm:hidden">Agencia</span>
+            <span className="hidden sm:inline">Agencia de datos</span>
           </Link>
           <Link href="/panel" className={`${pill} hidden text-tinta/80 hover:bg-tinta/10 sm:inline-flex`}>
             Panel

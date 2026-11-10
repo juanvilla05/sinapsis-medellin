@@ -5,14 +5,14 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
 1. QUÉ ES
    PULSO · Medellín en vivo: un mapa 3D de Medellín con el aire de SIATA en vivo, la seguridad vial y
    el hurto de MEData en columnas de 250 m, rutas que se comparan por aire y siniestralidad, y PulsoBot,
-   un asistente que responde citando la fuente y mueve el mapa. Se complementa con La Alpujarra 3D,
-   donde agentes auditan y limpian los datos de MEData (frescura del catálogo, laboratorio de limpieza).
+   un asistente con voz que responde citando la fuente y mueve el mapa. Se complementa con la Agencia de
+   datos, donde agentes auditan y limpian los datos de MEData (frescura, limpieza y propuestas de mejora).
    Pregunta que responde: ¿qué tan al día están los datos abiertos de Medellín y qué se puede (y no se
    puede) saber hoy con ellos sobre la ciudad?
 
 2. PROBARLO EN LÍNEA (recomendado, no requiere cuenta)
    Abrir https://pulsomedellin.com
-   La Alpujarra 3D (calidad de los datos): https://pulsomedellin.com/alpujarra
+   Agencia de datos (calidad de los datos): https://pulsomedellin.com/alpujarra
    Versión sin 3D (panel ejecutivo): https://pulsomedellin.com/panel
 
 3. EJECUTARLO EN EL COMPUTADOR
@@ -46,9 +46,10 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    d) Botón "Rutas" > ejemplo "La Alpujarra -> Parque Lleras" (requiere la clave de Google; está en
       la versión en línea): alternativas con duración, PM2.5 estimado e incidentes históricos
       cercanos, dibujadas sobre el mapa.
-   e) "Datos" / "Calidad de datos" (/alpujarra): "92,6 %" de los conjuntos de MEData con periodicidad
-      declarada está atrasado: 313 de 338. "Entrar a SINAPSIS", clic en un despacho del menú y tecla E.
-      Páginas directas: /monitoreo (Aire, Brecha 2014-2026, Comunas), /laboratorio, /frescura.
+   e) "Agencia de datos" (/alpujarra): la oficina donde los agentes auditan y limpian los datos.
+      Arriba, "92,6 %" de los conjuntos de MEData con periodicidad declarada está atrasado (313 de 338).
+      Cada despacho abre su herramienta; también tienen página propia: /frescura, /laboratorio,
+      /ventanilla (propuestas de mejora por conjunto), /monitoreo (Aire, Brecha 2014-2026, Comunas).
    f) /laboratorio > "Víctimas en Incidentes viales": puntaje de calidad 0 -> 98, 52.428 filas
       vacías de 65.489 leídas y 7 columnas con datos personales fuera del CSV descargable.
    Si una fuente no responde, la aplicación lo dice y muestra la copia guardada con su fecha.
@@ -79,7 +80,7 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
 
 6. USO DE IA
    - Claude (Anthropic): asistente de programación para escribir y depurar código, y Claude Design para
-     el diseño visual del mundo 3D. El equipo revisó y puede explicar cada componente.
+     el diseño visual de la Agencia de datos. El equipo revisó y puede explicar cada componente.
    - ElevenLabs, opcional y solo con clave: lee en voz alta la respuesta de PulsoBot (texto a voz).
    - Gemini 2.5 Flash (Google), opcional y solo con clave: en PulsoBot interpreta la pregunta y
      elige una herramienta. No genera cifras: todas salen de funciones deterministas sobre las fuentes

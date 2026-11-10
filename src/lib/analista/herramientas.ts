@@ -458,7 +458,7 @@ const NOMBRE_CAPA_APP: Record<(typeof CAPAS_APP)[number], string> = {
 };
 const NOMBRE_SECCION_APP: Record<keyof typeof SECCIONES_APP, string> = {
   inicio: "el mapa en vivo",
-  alpujarra: "la vista de calidad de los datos",
+  alpujarra: "la Agencia de datos",
   panel: "el panel ejecutivo",
   monitoreo: "la Sala de Monitoreo",
   laboratorio: "el Laboratorio de Limpieza",
@@ -490,7 +490,7 @@ export interface DatosControl {
 
 const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
   descripcion:
-    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (calidad de los datos, panel, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
+    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, panel, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
   esquema: esquemaControl,
   async ejecutar(a) {
     const listo = (datos: DatosControl): Respuesta<DatosControl> => ({ ok: true, datos, citas: [] });
@@ -516,7 +516,7 @@ const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
       case "limpiar-rutas":
         return listo({ accion: "limpiar-rutas", texto: "Listo, borré las rutas del mapa." });
       case "ir-a": {
-        if (!a.seccion) return falta("Dime a qué sección: calidad de los datos, panel, monitoreo, laboratorio o frescura.");
+        if (!a.seccion) return falta("Dime a qué sección: la Agencia de datos, el panel, el monitoreo, el laboratorio o la frescura.");
         return listo({ accion: "ir-a", ruta: SECCIONES_APP[a.seccion], texto: `Listo, te llevo a ${NOMBRE_SECCION_APP[a.seccion]}.` });
       }
     }
