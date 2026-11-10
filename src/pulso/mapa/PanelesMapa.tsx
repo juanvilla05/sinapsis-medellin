@@ -43,18 +43,29 @@ export interface InfoCapa {
   corte: string | null;
 }
 
-export function Atribucion({ className = "" }: { className?: string }) {
+/** Créditos del mapa y de los datos, detrás de un botón ⓘ para no llenar la pantalla de letra pequeña. */
+export function Atribucion({ className = "", arriba = false }: { className?: string; arriba?: boolean }) {
   return (
-    <p className={`text-[10.5px] leading-snug text-tinta/55 ${className}`}>
-      <a className={`underline-offset-2 hover:underline ${foco}`} href="https://openfreemap.org" target="_blank" rel="noreferrer">
-        © OpenFreeMap
-      </a>{" "}
-      <a className={`underline-offset-2 hover:underline ${foco}`} href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
-        © OpenStreetMap
-      </a>
-      <span aria-hidden="true"> · </span>
-      <span>Datos: MEData · SIATA · datos.gov.co · GeoMedellín</span>
-    </p>
+    <details className={`relative ${className}`}>
+      <summary
+        aria-label="Créditos del mapa y de los datos"
+        title="Créditos del mapa y de los datos"
+        className={`flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-full border border-tinta/10 bg-tinta/5 text-[13px] font-bold text-tinta/75 hover:bg-tinta/10 [&::-webkit-details-marker]:hidden ${foco}`}
+      >
+        i
+      </summary>
+      <p className={`${vidrio} absolute z-20 w-[250px] px-3 py-2.5 text-[12.5px] leading-relaxed text-tinta/85 ${arriba ? "bottom-9 left-0" : "top-9 right-0"}`}>
+        Mapa base:{" "}
+        <a className={`underline underline-offset-2 ${foco}`} href="https://openfreemap.org" target="_blank" rel="noreferrer">
+          OpenFreeMap
+        </a>{" "}
+        ·{" "}
+        <a className={`underline underline-offset-2 ${foco}`} href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+          © OpenStreetMap
+        </a>
+        . Datos: MEData, SIATA, datos.gov.co y GeoMedellín.
+      </p>
+    </details>
   );
 }
 
@@ -77,74 +88,43 @@ export function KpisAire({
 }) {
   const cat = resumen?.promedioIca != null ? categoriaICA(resumen.promedioIca).clave : null;
   return (
-    <section aria-label="Aire en Medellín ahora" className={`${vidrio} px-3 py-2.5`}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-tinta/70">
-          <span className={`h-1.5 w-1.5 rounded-full ${guardado ? "bg-amber-300" : "bg-[#34D399]"}`} aria-hidden="true" />
-          Aire en Medellín
-        </h2>
-        {pildora && (
-          <span className={`truncate rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${guardado ? "bg-amber-300/15 text-amber-200" : "bg-tinta/8 text-tinta/75"}`}>{pildora}</span>
-        )}
-      </div>
-
+    <section aria-label="Aire en Medellín ahora" className={`${vidrio} px-3.5 py-2.5`}>
       {fase === "error" && !resumen ? (
-        <div className="mt-2 flex items-center justify-between gap-2 text-[12.5px] text-tinta/75">
-          <span>No pudimos leer SIATA en este momento.</span>
-          <button type="button" onClick={onReintentar} className={`shrink-0 rounded-full bg-tinta/10 px-2.5 py-1 text-[12px] font-semibold hover:bg-tinta/15 ${foco}`}>
+        <div className="flex items-center justify-between gap-2 text-[13.5px] text-tinta/80">
+          <span>No pudimos leer el aire de SIATA.</span>
+          <button type="button" onClick={onReintentar} className={`shrink-0 rounded-full bg-tinta/10 px-3 py-1 text-[13px] font-semibold hover:bg-tinta/15 ${foco}`}>
             Reintentar
           </button>
         </div>
       ) : !resumen ? (
-        <div className="mt-2 grid grid-cols-3 gap-2" aria-busy="true" aria-label="Cargando el aire de SIATA">
-          {[0, 1, 2].map((k) => (
-            <div key={k} className="h-10 rounded-lg bg-tinta/5 motion-safe:animate-pulse" />
-          ))}
-        </div>
+        <div className="h-11 rounded-lg bg-tinta/5 motion-safe:animate-pulse" aria-busy="true" aria-label="Cargando el aire de SIATA" />
       ) : resumen.estacionesValidas === 0 ? (
-        <p className="mt-2 text-[12.5px] text-tinta/75">SIATA no reporta lecturas válidas de PM2.5 en Medellín en este momento.</p>
+        <p className="text-[13.5px] text-tinta/80">SIATA no reporta lecturas de aire en Medellín en este momento.</p>
       ) : (
-        <dl className="mt-2 grid grid-cols-3 gap-2">
-          <div className="min-w-0">
-            <dt className="text-[10.5px] leading-tight text-tinta/60">Estaciones válidas</dt>
-            <dd className="font-mono text-[17px] font-bold tabular-nums leading-tight">
-              {resumen.estacionesValidas}
-              <span className="text-[12px] font-medium text-tinta/50"> de {resumen.total}</span>
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-[10.5px] leading-tight text-tinta/60">PM2.5 promedio</dt>
-            <dd className="leading-tight">
-              <span className="font-mono text-[17px] font-bold tabular-nums">{resumen.promedioPm25 != null ? decimal(resumen.promedioPm25) : "—"}</span>
-              <span className="text-[10.5px] text-tinta/55"> µg/m³</span>
-              {cat && (
-                <span className="mt-0.5 flex items-center gap-1 truncate text-[10.5px] text-tinta/75">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: CATEGORIAS[cat].color }} aria-hidden="true" />
-                  {CATEGORIAS[cat].corto}
-                </span>
-              )}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-[10.5px] leading-tight text-tinta/60">Mayor PM2.5</dt>
-            <dd className="leading-tight">
-              {resumen.peor ? (
-                <button
-                  type="button"
-                  onClick={onPeor}
-                  className={`block w-full min-w-0 rounded-md text-left hover:bg-tinta/5 ${foco}`}
-                  aria-label={`Ver en el mapa la estación ${resumen.peor.sitio || resumen.peor.nombre}: ${resumen.peor.pm25} microgramos por metro cúbico`}
-                >
-                  <span className="font-mono text-[17px] font-bold tabular-nums">{resumen.peor.pm25 != null ? decimal(resumen.peor.pm25) : "—"}</span>
-                  <span className="text-[10.5px] text-tinta/55"> µg/m³</span>
-                  <span className="block truncate text-[10.5px] text-[#7DD3FC]">{resumen.peor.sitio || resumen.peor.nombre}</span>
-                </button>
-              ) : (
-                "—"
-              )}
-            </dd>
-          </div>
-        </dl>
+        <button
+          type="button"
+          onClick={onPeor}
+          disabled={!resumen.peor}
+          aria-label={`Aire en Medellín: ${resumen.promedioPm25 != null ? decimal(resumen.promedioPm25) : "sin dato"} microgramos por metro cúbico de PM2.5 en promedio${cat ? `, ${CATEGORIAS[cat].texto}` : ""}. ${pildora ?? ""}. Ver la estación con el valor más alto.`}
+          className={`flex w-full items-center gap-3 rounded-lg text-left ${foco}`}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 text-[13.5px] font-bold">
+              <span className={`h-2 w-2 rounded-full ${guardado ? "bg-amber-300" : "bg-[#34D399]"}`} aria-hidden="true" />
+              Aire ahora
+            </span>
+            {pildora && <span className={`mt-0.5 block truncate text-[12.5px] ${guardado ? "text-amber-200" : "text-tinta/65"}`}>{pildora}</span>}
+          </span>
+          <span className="shrink-0 text-right leading-none">
+            <span className="font-mono text-[26px] font-bold tabular-nums">{resumen.promedioPm25 != null ? decimal(resumen.promedioPm25) : "—"}</span>
+            <span className="ml-1 text-[12.5px] text-tinta/65">µg/m³</span>
+          </span>
+          {cat && (
+            <span className="shrink-0 rounded-full px-2.5 py-1 text-[12.5px] font-bold" style={{ background: CATEGORIAS[cat].fondo, color: CATEGORIAS[cat].tinta }}>
+              {CATEGORIAS[cat].corto}
+            </span>
+          )}
+        </button>
       )}
     </section>
   );
@@ -152,77 +132,53 @@ export function KpisAire({
 
 /* ───────── leyendas ───────── */
 
-export function LeyendaAire({ estaciones, compacta = false }: { estaciones: EstacionSiata[] | null; compacta?: boolean }) {
+export function LeyendaAire({ estaciones }: { estaciones: EstacionSiata[] | null; compacta?: boolean }) {
   const presentes = new Set((estaciones ?? []).filter((e) => e.enMedellin && e.pm25 !== null).map((e) => e.categoria));
   const mostrar = ORDEN_CATEGORIAS.filter((c) => c !== "sin-dato" && (presentes.has(c) || ["buena", "aceptable", "danina-sensibles"].includes(c)));
   return (
-    <div className="space-y-1">
-      <ul className="flex flex-wrap gap-x-2.5 gap-y-1" aria-label="Categorías del ICA (Resolución 2254 de 2017)">
-        {mostrar.map((c) => (
-          <li key={c} className="flex items-center gap-1 text-[10.5px] text-tinta/75">
-            <span className="h-2 w-2 rounded-full" style={{ background: CATEGORIAS[c].color }} aria-hidden="true" />
-            {CATEGORIAS[c].corto}
-          </li>
-        ))}
-        <li className="flex items-center gap-1 text-[10.5px] text-tinta/60">
-          <span className="h-2 w-2 rounded-full bg-slate-400/60" aria-hidden="true" />
-          Fuera de Medellín o sin dato
+    <ul className="flex flex-wrap gap-x-3 gap-y-1" aria-label="Categorías del índice de calidad del aire (Resolución 2254 de 2017)">
+      {mostrar.map((c) => (
+        <li key={c} className="flex items-center gap-1.5 text-[12.5px] text-tinta/80">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: CATEGORIAS[c].color }} aria-hidden="true" />
+          {CATEGORIAS[c].corto}
         </li>
-      </ul>
-      {!compacta && <p className="text-[10.5px] text-tinta/50">Altura del faro proporcional al PM2.5 (µg/m³) · el anillo late con cada estación en vivo.</p>}
-    </div>
+      ))}
+    </ul>
   );
 }
 
-export function LeyendaRejilla({ rejilla, compacta = false }: { rejilla: RejillaMapa; compacta?: boolean }) {
+export function LeyendaRejilla({ rejilla }: { rejilla: RejillaMapa; compacta?: boolean }) {
   const tema = useTema();
+  const primera = rejilla.marcas[0];
+  const ultima = rejilla.marcas[rejilla.marcas.length - 1];
   return (
-    <div className="space-y-1">
-      <div className="h-2 rounded-full" style={{ background: gradienteCss(tema) }} aria-hidden="true" />
-      <div className="relative h-3.5 text-[10px] tabular-nums text-tinta/65" aria-label="Marcas de la escala de color">
-        {rejilla.marcas.map((m, k) => (
-          <span
-            key={m.n}
-            className="absolute top-0"
-            style={{ left: `${m.t * 100}%`, transform: k === 0 ? "none" : k === rejilla.marcas.length - 1 ? "translateX(-100%)" : "translateX(-50%)" }}
-          >
-            {numero(m.n)}
-            {k === rejilla.marcas.length - 1 && rejilla.maximo > m.n ? "+" : ""}
-          </span>
-        ))}
-      </div>
-      <p className="flex justify-between text-[10.5px] text-tinta/60">
-        <span>Menos casos</span>
-        <span>Más casos reportados →</span>
+    <div className="space-y-1" aria-label={`Escala de color: de ${primera ? numero(primera.n) : "pocos"} a ${ultima ? numero(ultima.n) : "muchos"} casos por celda de 250 metros`}>
+      <div className="h-2.5 rounded-full" style={{ background: gradienteCss(tema) }} aria-hidden="true" />
+      <p className="flex justify-between text-[12.5px] tabular-nums text-tinta/75">
+        <span>{primera ? numero(primera.n) : "Menos"} casos</span>
+        <span>
+          {ultima ? numero(ultima.n) : "Más"}
+          {ultima && rejilla.maximo > ultima.n ? "+" : ""}
+        </span>
       </p>
-      {!compacta && (
-        <p className="text-[10.5px] text-tinta/50">
-          Celdas de 250 m con 5 o más casos · altura ∝ √casos, con tope en el percentil 99 ({numero(rejilla.tope)}) para que ninguna celda aplaste al resto.
-        </p>
-      )}
     </div>
   );
 }
 
 export function LeyendaComunas() {
-  return (
-    <p className="flex items-center gap-1.5 text-[10.5px] text-tinta/70">
-      <span className="h-0.5 w-5 rounded bg-[#7DD3FC] shadow-[0_0_6px_#38BDF8]" aria-hidden="true" />
-      Límite oficial de las 16 comunas y 5 corregimientos
-    </p>
-  );
+  return null;
 }
 
 /* ───────── panel de capas (escritorio) y chips (móvil) ───────── */
 
 const CAPAS_ORDEN: CapaPulso[] = ["aire", "incidentes", "victimas", "hurto", "comunas"];
 
+/** Una sola línea bajo el nombre de la capa, y solo cuando dice algo útil (la fecha del dato o un problema). */
 function textoFase(i: InfoCapa, activa: boolean) {
-  if (i.fase === "cargando") return "Cargando…";
+  if (i.fase === "cargando") return activa ? "Cargando…" : null;
   if (i.fase === "error") return "No disponible ahora";
   if (i.fase === "vacio") return "Datos en preparación";
-  if (!i.corte) return activa ? null : "Se carga al activarla";
-  return i.corte;
+  return activa ? i.corte : null;
 }
 
 function Interruptor({ activo }: { activo: boolean }) {
@@ -259,13 +215,13 @@ function IconoGiro({ girando }: { girando: boolean }) {
   );
 }
 
-const botonChico = `inline-flex items-center gap-1.5 rounded-full border border-tinta/10 bg-tinta/5 px-2.5 py-1 text-[12px] font-semibold text-tinta/85 hover:bg-tinta/10 ${foco}`;
+const botonChico = `inline-flex h-7 items-center gap-1.5 rounded-full border border-tinta/10 bg-tinta/5 px-2.5 text-[13px] font-semibold text-tinta/85 hover:bg-tinta/10 ${foco}`;
 
 export function PanelCapas(p: PropsCapas) {
   return (
     <section aria-label="Capas del mapa" className={`${vidrio} flex max-h-full min-h-0 w-full min-w-0 flex-col`}>
       <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-tinta/70">Capas</h2>
+        <h2 className="text-[14px] font-bold">Capas</h2>
         <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
@@ -282,6 +238,7 @@ export function PanelCapas(p: PropsCapas) {
               <path d="M8 1.5 14 6v8.5H10v-4H6v4H2V6Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
             </svg>
           </button>
+          <Atribucion />
           <button type="button" onClick={p.onPlegar} className={botonChico} aria-expanded={!p.plegado} aria-label={p.plegado ? "Mostrar capas" : "Ocultar capas"}>
             <svg viewBox="0 0 16 16" className={`h-3.5 w-3.5 transition-transform motion-reduce:transition-none ${p.plegado ? "rotate-180" : ""}`} aria-hidden="true">
               <path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -308,11 +265,8 @@ export function PanelCapas(p: PropsCapas) {
                     >
                       <Interruptor activo={activa} />
                       <span className="min-w-0">
-                        <span className="block text-[13px] font-semibold leading-tight">{NOMBRE_CAPA[c]}</span>
-                        <span className="mt-0.5 block text-[11px] leading-snug text-tinta/55">
-                          {i.fuente}
-                          {sub ? ` · ${sub}` : ""}
-                        </span>
+                        <span className="block text-[14px] font-semibold leading-tight">{NOMBRE_CAPA[c]}</span>
+                        {sub && <span className="mt-0.5 block text-[12.5px] leading-snug text-tinta/65">{sub}</span>}
                       </span>
                       {i.fase === "cargando" && <Girador className="ml-auto mt-0.5 shrink-0" />}
                     </button>
@@ -327,10 +281,8 @@ export function PanelCapas(p: PropsCapas) {
               );
             })}
           </ul>
-          <Atribucion className="mt-2 px-2" />
         </div>
       )}
-      {p.plegado && <Atribucion className="px-3 pb-2.5" />}
     </section>
   );
 }
@@ -340,18 +292,12 @@ export function ChipsCapas(p: PropsCapas & { foco: CapaPulso | null }) {
   const info = enFoco ? p.info[enFoco] : null;
   return (
     <div className="flex flex-col gap-1.5">
-      {enFoco && info && (
-        <div className={`${vidrio} px-3 py-2`}>
-          <p className="mb-1 truncate text-[11px] text-tinta/70">
-            <span className="font-semibold text-tinta/90">{NOMBRE_CAPA[enFoco]}</span> · {info.fuente}
-            {textoFase(info, true) ? ` · ${textoFase(info, true)}` : ""}
-          </p>
-          {p.leyendas[enFoco]}
-          <Atribucion className="mt-1" />
-        </div>
-      )}
-      {!enFoco && <Atribucion className={`${vidrio} px-3 py-1.5`} />}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label="Capas del mapa">
+      {/* a la derecha queda libre el botón de PulsoBot */}
+      <div className="mr-[146px] flex items-end gap-1.5">
+        <Atribucion arriba />
+        {enFoco && info && p.leyendas[enFoco] && <div className={`${vidrio} min-w-0 flex-1 px-3 py-2`}>{p.leyendas[enFoco]}</div>}
+      </div>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label="Capas del mapa">
         {CAPAS_ORDEN.map((c) => {
           const activa = p.capas[c];
           const i = p.info[c];

@@ -423,7 +423,7 @@ const esquemaFuentes = z.object({
 });
 
 const herramientaFuentes = definir<z.infer<typeof esquemaFuentes>, ReturnType<typeof explicarFuentes> extends Respuesta<infer T> ? T : never>({
-  descripcion: "Explica de dónde salen los datos de SINAPSIS, cómo reproducir las cifras, sus límites, cómo usar el Analista y qué hace la IA.",
+  descripcion: "Explica qué es PULSO Medellín y qué sabe hacer PulsoBot, de dónde salen los datos, cómo reproducir las cifras, sus límites y qué hace la IA. Úsala para saludos y preguntas generales sobre la plataforma.",
   esquema: esquemaFuentes,
   async ejecutar({ tema }) {
     return explicarFuentes(tema, resumen);
@@ -445,6 +445,84 @@ const planearRuta = definir<z.infer<typeof esquemaRuta>, DatosRuta>({
   ejecutar: (args) => planearRutaPulso(args),
 });
 
+/* ───────────── controlarApp (PulsoBot maneja la plataforma) ───────────── */
+
+const CAPAS_APP = ["aire", "incidentes", "victimas", "hurto", "comunas"] as const;
+const SECCIONES_APP = { inicio: "/", alpujarra: "/alpujarra", panel: "/panel", monitoreo: "/monitoreo", laboratorio: "/laboratorio", frescura: "/frescura", analista: "/analista" } as const;
+const NOMBRE_CAPA_APP: Record<(typeof CAPAS_APP)[number], string> = {
+  aire: "aire (PM2.5 de SIATA)",
+  incidentes: "incidentes viales",
+  victimas: "víctimas en incidentes viales",
+  hurto: "hurto a personas",
+  comunas: "comunas y corregimientos",
+};
+const NOMBRE_SECCION_APP: Record<keyof typeof SECCIONES_APP, string> = {
+  inicio: "el mapa en vivo",
+  alpujarra: "la Agencia de datos",
+  panel: "el panel ejecutivo",
+  monitoreo: "la Sala de Monitoreo",
+  laboratorio: "el Laboratorio de Limpieza",
+  frescura: "el Reloj de Frescura",
+  analista: "la página del asistente",
+};
+
+const esquemaControl = z.object({
+  accion: z
+    .enum(["capa", "tema", "recorrido", "vista-inicial", "abrir-rutas", "limpiar-rutas", "ir-a"])
+    .describe("capa: mostrar u ocultar una capa del mapa · tema: claro u oscuro · recorrido: giro automático de la cámara · vista-inicial: volver a la vista general · abrir-rutas: abrir el planificador · limpiar-rutas: borrar rutas dibujadas · ir-a: abrir otra sección"),
+  capa: z.enum(CAPAS_APP).optional(),
+  visible: z.boolean().optional().describe("true para mostrar la capa (por defecto), false para ocultarla"),
+  tema: z.enum(["claro", "oscuro"]).optional(),
+  activo: z.boolean().optional().describe("recorrido encendido (por defecto) o apagado"),
+  seccion: z.enum(["inicio", "alpujarra", "panel", "monitoreo", "laboratorio", "frescura", "analista"]).optional(),
+});
+
+export interface DatosControl {
+  accion: z.infer<typeof esquemaControl>["accion"];
+  /** frase corta de confirmación, también para la voz */
+  texto: string;
+  capa?: (typeof CAPAS_APP)[number];
+  visible?: boolean;
+  tema?: "claro" | "oscuro";
+  activo?: boolean;
+  ruta?: string;
+}
+
+const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
+  descripcion:
+    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, panel, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
+  esquema: esquemaControl,
+  async ejecutar(a) {
+    const listo = (datos: DatosControl): Respuesta<DatosControl> => ({ ok: true, datos, citas: [] });
+    const falta = (detalle: string): Respuesta<DatosControl> => ({ ok: false, motivo: "sin-datos", detalle });
+    switch (a.accion) {
+      case "capa": {
+        if (!a.capa) return falta("Dime qué capa: aire, incidentes viales, víctimas, hurto o comunas.");
+        const visible = a.visible ?? true;
+        return listo({ accion: "capa", capa: a.capa, visible, texto: visible ? `Listo, te muestro en el mapa la capa de ${NOMBRE_CAPA_APP[a.capa]}.` : `Listo, oculté la capa de ${NOMBRE_CAPA_APP[a.capa]}.` });
+      }
+      case "tema": {
+        if (!a.tema) return falta("Dime si prefieres el tema claro o el oscuro.");
+        return listo({ accion: "tema", tema: a.tema, texto: `Listo, cambié a tema ${a.tema}.` });
+      }
+      case "recorrido": {
+        const activo = a.activo ?? true;
+        return listo({ accion: "recorrido", activo, texto: activo ? "Listo, la cámara empieza a recorrer la ciudad." : "Listo, detuve el recorrido." });
+      }
+      case "vista-inicial":
+        return listo({ accion: "vista-inicial", texto: "Listo, volví a la vista general de Medellín." });
+      case "abrir-rutas":
+        return listo({ accion: "abrir-rutas", texto: "Listo, abrí el planificador de rutas. También puedes pedirme la ruta diciendo de dónde a dónde vas." });
+      case "limpiar-rutas":
+        return listo({ accion: "limpiar-rutas", texto: "Listo, borré las rutas del mapa." });
+      case "ir-a": {
+        if (!a.seccion) return falta("Dime a qué sección: la Agencia de datos, el panel, el monitoreo, el laboratorio o la frescura.");
+        return listo({ accion: "ir-a", ruta: SECCIONES_APP[a.seccion], texto: `Listo, te llevo a ${NOMBRE_SECCION_APP[a.seccion]}.` });
+      }
+    }
+  },
+});
+
 /* ───────────── Registro ───────────── */
 
 export const REGISTRO = {
@@ -456,6 +534,7 @@ export const REGISTRO = {
   limpiarConjunto,
   explicarFuentes: herramientaFuentes,
   planearRuta,
+  controlarApp,
 };
 
 // Comprobación de tipos: el registro cubre exactamente los nombres compartidos con el cliente.

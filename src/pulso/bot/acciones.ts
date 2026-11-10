@@ -109,10 +109,38 @@ export function accionesMapa(herramienta: string, respuesta: unknown): EventoPul
       const elegida = rutas.find((x) => x.recomendada)?.id;
       return [{ tipo: "rutas", rutas, origen: datos.origen, destino: datos.destino, ...(elegida ? { elegida } : {}) }];
     }
+    case "controlarApp": {
+      const capas: CapaPulso[] = ["aire", "incidentes", "victimas", "hurto", "comunas"];
+      switch (str(datos.accion)) {
+        case "capa": {
+          const capa = capas.find((c) => c === datos.capa);
+          return capa ? [{ tipo: "capa", capa, visible: datos.visible !== false }] : [];
+        }
+        case "tema":
+          return datos.tema === "claro" || datos.tema === "oscuro" ? [{ tipo: "tema", tema: datos.tema }] : [];
+        case "recorrido":
+          return [{ tipo: "recorrido", activo: datos.activo !== false }];
+        case "vista-inicial":
+          return [{ tipo: "comuna", codigo: null }, { tipo: "vista-inicial" }];
+        case "abrir-rutas":
+          return [{ tipo: "panel", panel: "rutas" }];
+        case "limpiar-rutas":
+          return [{ tipo: "limpiar-rutas" }];
+        case "ir-a": {
+          const ruta = str(datos.ruta);
+          return ruta && ruta.startsWith("/") ? [{ tipo: "navegar", ruta }] : [];
+        }
+        default:
+          return [];
+      }
+    }
     default:
       return [];
   }
 }
+
+/** ¿La acción deja algo nuevo a la vista en el mapa? (para avisar "te lo muestro en el mapa") */
+export const mueveElMapa = (eventos: EventoPulso[]) => eventos.some((e) => ["capa", "comuna", "estacion", "rutas", "vista-inicial", "recorrido"].includes(e.tipo));
 
 /* ───────────── Resumen para voz (modo directo) ───────────── */
 
@@ -133,6 +161,25 @@ export function resumenParaVoz(herramienta: string, respuesta: unknown): string 
   const r = datosOk(respuesta);
   if (!r) return null;
   const { datos, citas } = r;
+
+  if (herramienta === "controlarApp") return str(datos.texto);
+
+  if (herramienta === "explicarFuentes" && Array.isArray(datos.parrafos)) {
+    const p = datos.parrafos.filter((x): x is string => typeof x === "string");
+    return p.slice(0, 2).join(" ") || null;
+  }
+
+  if (herramienta === "consultarFrescura") {
+    const s = esObjeto(datos.secretaria) ? datos.secretaria : null;
+    if (s && num(s.atrasados) !== null && num(s.total) !== null)
+      return `En ${str(s.publicador) ?? "esa secretaría"}, ${fmt(num(s.atrasados)!)} de ${fmt(num(s.total)!)} conjuntos de datos están atrasados.${fuente(citas)}`;
+    const res = esObjeto(datos.resumen) ? datos.resumen : null;
+    const primera = Array.isArray(datos.secretarias) ? datos.secretarias.filter(esObjeto)[0] : undefined;
+    if (res && num(res.atrasados) !== null && num(res.evaluables) !== null) {
+      const cola = primera && str(primera.publicador) ? ` La secretaría con más conjuntos atrasados es ${str(primera.publicador)}.` : "";
+      return `De ${fmt(num(res.evaluables)!)} conjuntos de MEData con periodicidad declarada, ${fmt(num(res.atrasados)!)} están atrasados.${cola}`;
+    }
+  }
 
   if (herramienta === "consultarAire") {
     const peor = peorEstacion(datos);

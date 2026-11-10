@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { emitir, escuchar } from "./bus";
 import MapaPulso from "./mapa/MapaPulso";
@@ -29,7 +30,17 @@ export default function PulsoEnVivo() {
   const [panel, setPanel] = useState<"rutas" | "bot" | null>(null);
   const tema = useTemaGuardado();
   const alternarTema = () => guardarTema(tema === "oscuro" ? "claro" : "oscuro");
-  useEffect(() => escuchar((e) => e.tipo === "panel" && setPanel(e.panel)), []);
+  const router = useRouter();
+  // PulsoBot también maneja la plataforma: paneles, tema y navegación llegan por el bus.
+  useEffect(
+    () =>
+      escuchar((e) => {
+        if (e.tipo === "panel") setPanel(e.panel);
+        else if (e.tipo === "tema") guardarTema(e.tema);
+        else if (e.tipo === "navegar") router.push(e.ruta);
+      }),
+    [router],
+  );
 
   return (
     <ContextoTema.Provider value={tema}>
@@ -43,8 +54,10 @@ export default function PulsoEnVivo() {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#34D399]" />
           </span>
           <span className="leading-tight">
-            <span className="block text-[15px] font-extrabold tracking-[0.14em]">PULSO</span>
-            <span className="hidden text-[11px] text-tinta/65 sm:block">Medellín en vivo · <Reloj /></span>
+            <span className="block text-[15px] font-extrabold tracking-[0.1em]">
+              PULSO <span className="font-semibold tracking-[0.06em] text-tinta/75">Medellín</span>
+            </span>
+            <span className="hidden text-[12px] text-tinta/65 sm:block">en vivo · <Reloj /></span>
           </span>
         </div>
         <nav className="pointer-events-auto ml-auto flex min-w-0 gap-1 overflow-x-auto rounded-2xl border border-tinta/10 bg-fondo/80 p-1 backdrop-blur [scrollbar-width:none]" aria-label="Secciones">
@@ -52,12 +65,11 @@ export default function PulsoEnVivo() {
             Rutas
           </button>
           <button type="button" onClick={() => emitir({ tipo: "panel", panel: panel === "bot" ? null : "bot" })} className={`${pill} ${panel === "bot" ? "bg-[#2563EB] text-tinta" : "text-tinta/80 hover:bg-tinta/10"}`}>
-            <span className="sm:hidden">Preguntar</span>
-            <span className="hidden sm:inline">Pregúntale a PULSO</span>
+PulsoBot
           </button>
           <Link href="/alpujarra" className={`${pill} shrink-0 text-tinta/80 hover:bg-tinta/10`}>
-            <span className="sm:hidden">Datos</span>
-            <span className="hidden sm:inline">Calidad de datos</span>
+            <span className="sm:hidden">Agencia</span>
+            <span className="hidden sm:inline">Agencia de datos</span>
           </Link>
           <Link href="/panel" className={`${pill} hidden text-tinta/80 hover:bg-tinta/10 sm:inline-flex`}>
             Panel
@@ -95,8 +107,8 @@ export default function PulsoEnVivo() {
 
       <PulsoBot />
 
-      <p className="pointer-events-none absolute bottom-1.5 left-1/2 z-10 hidden -translate-x-1/2 text-center text-[10.5px] text-tinta/45 sm:block">
-        SINAPSIS · Hackathon de Datos ITM 2026 · Propuesta académica, no es un sitio oficial de la Alcaldía de Medellín.
+      <p className="pointer-events-none absolute bottom-1.5 left-1/2 z-10 hidden -translate-x-1/2 text-center text-[11.5px] text-tinta/55 sm:block">
+        PULSO Medellín · propuesta académica, no es un sitio oficial de la Alcaldía.
       </p>
     </div>
     </ContextoTema.Provider>

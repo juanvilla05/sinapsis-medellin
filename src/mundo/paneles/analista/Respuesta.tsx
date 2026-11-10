@@ -458,6 +458,9 @@ export default function Respuesta({
     case "planearRuta":
       cuerpo = <CuerpoRuta d={d as DatosRuta} />;
       break;
+    case "controlarApp":
+      cuerpo = <p className="m-0 text-[14px] leading-relaxed text-[#0F172A]">{(d as { texto?: string }).texto ?? "Listo."}</p>;
+      break;
     default:
       cuerpo = <CuerpoGenerico datos={d} />;
   }
