@@ -109,7 +109,7 @@ export default function Oficina3D({
         </div>
       )}
       {listo && (
-        <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-[#0B1220]/75 px-3 py-1 text-[11.5px] font-semibold text-white">
+        <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-[#0B1220]/75 px-3 py-1 text-[11.5px] font-semibold text-white">
           <span className="sm:hidden">Arrastra para girar</span>
           <span className="hidden sm:inline">Arrastra para girar · rueda o pellizco para acercar</span>
         </span>

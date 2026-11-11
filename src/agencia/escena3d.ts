@@ -308,21 +308,48 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
   const geoOjo = new THREE.SphereGeometry(0.028, 8, 8);
   const geoPierna = new THREE.CapsuleGeometry(0.085, 0.42, 4, 8);
   recursos.push(geoCuerpo, geoCabeza, geoPelo, geoOjo, geoPierna);
-  const agentes: { g: THREE.Object3D; fase: number }[] = [];
+  /** Un paso de la rutina de un agente: a dónde va (plano 2D), hacia dónde mira, cuánto se queda y si se sienta. */
+  interface Paso {
+    x: number;
+    y: number;
+    mira?: number;
+    espera: number;
+    sentado?: boolean;
+  }
+  interface AgenteVivo {
+    g: THREE.Group;
+    cuerpo: THREE.Group;
+    piernas: THREE.Group[];
+    ancla: THREE.Object3D;
+    pasos: Paso[];
+    i: number;
+    modo: "espera" | "camina";
+    t: number;
+    fase: number;
+    sentar: number;
+  }
+  const agentes: AgenteVivo[] = [];
   const anclasEtiqueta = new Map<string, THREE.Object3D>();
-  function agente(id: string, x: number, y: number, mira = 0) {
+  function agente(id: string, pasos: Paso[], retraso = 0) {
     const look = op.looks[id];
+    const inicio = pasos[0];
     const g = new THREE.Group();
-    g.position.set(X(x), 0, Z(y));
-    g.rotation.y = mira;
+    g.position.set(X(inicio.x), 0, Z(inicio.y));
+    g.rotation.y = inicio.mira ?? 0;
     const cuerpo = new THREE.Group();
     g.add(cuerpo);
     const pantalon = look.falda ? look.traje : "#1F2937";
+    const piernas: THREE.Group[] = [];
     for (const dx of [-0.11, 0.11]) {
+      // la pierna gira desde la cadera (para caminar y para sentarse)
+      const cadera = new THREE.Group();
+      cadera.position.set(dx, 0.58, 0);
       const p = new THREE.Mesh(geoPierna, mat(pantalon));
-      p.position.set(dx, 0.3, 0);
+      p.position.y = -0.28;
       p.castShadow = true;
-      cuerpo.add(p);
+      cadera.add(p);
+      cuerpo.add(cadera);
+      piernas.push(cadera);
     }
     const torso = new THREE.Mesh(geoCuerpo, mat(look.bata ? "#F8FAFC" : look.traje));
     torso.position.y = 0.95;
@@ -364,11 +391,59 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
       cuerpo.add(o);
     }
     escena.add(g);
-    agentes.push({ g: cuerpo, fase: agentes.length * 1.3 });
     const ancla = new THREE.Object3D();
-    ancla.position.set(X(x), 2.35, Z(y));
+    ancla.position.set(X(inicio.x), 2.35, Z(inicio.y));
     escena.add(ancla);
     anclasEtiqueta.set(id, ancla);
+    agentes.push({ g, cuerpo, piernas, ancla, pasos, i: 0, modo: "espera", t: -retraso, fase: agentes.length * 1.3, sentar: inicio.sentado ? 1 : 0 });
+  }
+
+  const VELOCIDAD = 1.15; // unidades por segundo
+  /** Gira por el camino más corto hacia el rumbo `a`. */
+  const girar = (de: number, a: number, k: number) => {
+    let d = a - de;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    return de + d * k;
+  };
+  function moverAgente(a: AgenteVivo, dt: number, t: number) {
+    const paso = a.pasos[a.i];
+    a.t += dt;
+    let caminando = false;
+    if (a.modo === "espera") {
+      if (paso.mira !== undefined) a.g.rotation.y = girar(a.g.rotation.y, paso.mira, Math.min(1, dt * 5));
+      if (a.t >= paso.espera && a.pasos.length > 1) {
+        a.i = (a.i + 1) % a.pasos.length;
+        a.modo = "camina";
+        a.t = 0;
+      }
+    } else {
+      const meta = a.pasos[a.i];
+      const dx = X(meta.x) - a.g.position.x;
+      const dz = Z(meta.y) - a.g.position.z;
+      const dist = Math.hypot(dx, dz);
+      if (a.sentar > 0.02) {
+        // primero se levanta de la silla
+        a.sentar = Math.max(0, a.sentar - dt * 2.5);
+      } else if (dist < 0.04) {
+        a.modo = "espera";
+        a.t = 0;
+      } else {
+        caminando = true;
+        const avance = Math.min(dist, VELOCIDAD * dt);
+        a.g.position.x += (dx / dist) * avance;
+        a.g.position.z += (dz / dist) * avance;
+        a.g.rotation.y = girar(a.g.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 8));
+      }
+    }
+    // se sienta al llegar a un paso con silla
+    if (a.modo === "espera" && a.pasos[a.i].sentado) a.sentar = Math.min(1, a.sentar + dt * 2);
+    const balanceo = caminando ? Math.sin(t * 9 + a.fase) * 0.55 : 0;
+    a.piernas[0].rotation.x = -1.45 * a.sentar + balanceo;
+    a.piernas[1].rotation.x = -1.45 * a.sentar - balanceo;
+    const salto = caminando ? Math.abs(Math.sin(t * 9 + a.fase)) * 0.05 : Math.sin(t * 2 + a.fase) * 0.02;
+    a.cuerpo.position.set(0, salto - 0.08 * a.sentar, -0.42 * a.sentar);
+    a.ancla.position.set(a.g.position.x, 2.35 - 0.1 * a.sentar, a.g.position.z);
   }
 
   /* ───────── salas ───────── */
@@ -508,7 +583,12 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
     );
     cartel(tTablero, 3.0, 2.0, new THREE.Vector3(X(9.9 + 1.5), 2.2, Z(0.03)), MURO_FONDO, g);
     silla(8.8, 2.05, "#D97706");
-    agente("reloj", 9.2, 2.95);
+    agente("reloj", [
+      { x: 9.2, y: 2.95, mira: 0, espera: 9, sentado: true },
+      { x: 10.7, y: 2.95, espera: 0 },
+      { x: 11.4, y: 1.05, mira: Math.PI, espera: 5 },
+      { x: 10.7, y: 2.95, espera: 0 },
+    ]);
     escritorio(8.0, 3.3, 2.4, "#F3D49B");
     monitor(8.4, 3.38);
     planta(12.2, 5.9, 0.8);
@@ -518,7 +598,12 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
   /* 02 Laboratorio */
   {
     const g = sala("lab");
-    agente("lab", 16.7, 1.75);
+    agente("lab", [
+      { x: 16.7, y: 1.75, mira: 0, espera: 6 },
+      { x: 18.5, y: 1.75, mira: 0, espera: 5 },
+      { x: 19.75, y: 1.05, mira: Math.PI, espera: 4 },
+      { x: 15.1, y: 1.75, mira: 0, espera: 5 },
+    ], 2);
     caja(14.4, 2.2, 0.8, 4.8, 1.25, 0.06, "#FFFFFF", g);
     caja(14.45, 2.25, 0, 4.7, 1.15, 0.8, "#9FE3D6", g);
     const geoFrasco = new THREE.CylinderGeometry(0.12, 0.2, 0.42, 16);
@@ -589,7 +674,12 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
     for (let c = 0; c < 3; c++)
       for (let f = 0; f < 2; f++) cartel(tPantalla((c + f) % 3), 1.8, 0.92, new THREE.Vector3(X(21.4 + 0.92 + c * 1.95), 2.85 - f * 1.05, Z(0.03)), MURO_FONDO, g, true);
     silla(23.95, 2.6, "#059669");
-    agente("monitoreo", 24.35, 3.45);
+    agente("monitoreo", [
+      { x: 24.35, y: 3.45, mira: 0, espera: 10, sentado: true },
+      { x: 26.0, y: 3.4, espera: 0 },
+      { x: 25.3, y: 1.05, mira: Math.PI, espera: 5 },
+      { x: 26.0, y: 3.4, espera: 0 },
+    ], 4);
     escritorio(22.9, 3.8, 2.9, "#A7E3C7");
     monitor(23.1, 3.88);
     monitor(24.55, 3.88);
@@ -620,7 +710,11 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
       300,
     );
     cartel(tProp, 4.2, 2.0, new THREE.Vector3(X(0.03), 2.3, Z(11.3)), MURO_IZQ, g);
-    agente("ventanilla", 2.9, 11.2, Math.PI / 2);
+    agente("ventanilla", [
+      { x: 2.9, y: 11.2, mira: Math.PI / 2, espera: 7 },
+      { x: 1.05, y: 10.4, mira: -Math.PI / 2, espera: 5 },
+      { x: 2.9, y: 12.3, mira: Math.PI / 2, espera: 6 },
+    ], 1);
     caja(4.1, 9.4, 1.0, 1.0, 3.8, 0.06, "#FFFFFF", g);
     caja(4.15, 9.45, 0, 0.9, 3.7, 1.0, "#CABDFA", g);
     const v = new THREE.Mesh(geoCaja, vidrio);
@@ -641,7 +735,11 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
     alf.position.set(X(13.6), 0.01, Z(12.6));
     alf.receiveShadow = true;
     escena.add(alf);
-    agente("guia", 13.5, 12.55);
+    agente("guia", [
+      { x: 13.5, y: 12.55, mira: 0, espera: 7 },
+      { x: 12.4, y: 12.4, mira: 0, espera: 3 },
+      { x: 14.7, y: 12.4, mira: 0, espera: 3 },
+    ], 3);
     caja(11.6, 13.0, 0, 4.0, 1.1, 1.0, NOCHE);
     caja(11.55, 12.95, 1.0, 4.1, 1.2, 0.06, "#FFFFFF");
     const tPulso = textura((ctx, w, h) => {
@@ -712,7 +810,12 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
     );
     cartel(tChat, 4.4, 2.0, new THREE.Vector3(X(0.03), 2.3, Z(17.4)), MURO_IZQ, g, true);
     silla(3.25, 15.65, AZUL);
-    agente("analista", 3.65, 16.5);
+    agente("analista", [
+      { x: 3.65, y: 16.5, mira: 0, espera: 9, sentado: true },
+      { x: 2.1, y: 16.4, espera: 0 },
+      { x: 1.15, y: 17.3, mira: -Math.PI / 2, espera: 5 },
+      { x: 2.1, y: 16.4, espera: 0 },
+    ], 6);
     escritorio(2.5, 16.85, 2.4, "#B9D3FB");
     monitor(2.9, 16.93);
     planta(0.6, 19.0, 0.9);
@@ -763,24 +866,95 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
     tVentanas.wrapT = THREE.RepeatWrapping;
     const matEdif = new THREE.MeshStandardMaterial({ map: tVentanas, emissive: "#FDE68A", emissiveMap: tVentanas, emissiveIntensity: 0.55, roughness: 0.6 });
     recursos.push(matEdif);
+    // ── Medellín: referencias de la ciudad (ilustración, sin cifras) ──
+    const lugares: { texto: string; x: number; y: number; z: number }[] = [];
+    const edificio = (bx: number, by: number, w: number, d: number, h: number, m: THREE.Material = matEdif) => {
+      const e = new THREE.Mesh(geoCaja, m);
+      e.scale.set(w, h, d);
+      e.position.set(X(bx + w / 2), h / 2, Z(by + d / 2));
+      e.castShadow = true;
+      e.receiveShadow = true;
+      salida.add(e);
+      return e;
+    };
+    // río Medellín
+    const rio = new THREE.Mesh(geoCaja, mat("#1D4ED8", { emissive: "#1E40AF", emissiveIntensity: 0.6, transparent: true, opacity: 0.85, roughness: 0.2 }));
+    rio.scale.set(0.55, 0.02, 7.7);
+    rio.position.set(X(20.1), 0.045, Z(12.3 + 3.85));
+    salida.add(rio);
+    lugares.push({ texto: "Río Medellín", x: 20.1, y: 18.9, z: 0.3 });
+
+    // edificios de fondo
     for (const [bx, by, bh] of [
-      [21.2, 13.0, 1.6],
-      [22.4, 12.4, 2.4],
-      [24.6, 12.2, 1.4],
-      [25.8, 13.2, 2.8],
-      [21.6, 15.4, 1.1],
-      [23.4, 14.6, 3.2],
-      [26.2, 15.8, 1.7],
-      [22.2, 17.6, 2.0],
-      [24.4, 17.0, 1.3],
-      [25.8, 18.2, 2.2],
-    ]) {
-      const m = new THREE.Mesh(geoCaja, matEdif);
-      m.scale.set(0.9, bh, 0.9);
-      m.position.set(X(bx + 0.45), bh / 2, Z(by + 0.45));
-      m.castShadow = true;
-      salida.add(m);
-      caja(bx, by, bh, 0.9, 0.9, 0.04, "#3B6296", salida, undefined, false);
+      [23.5, 12.5, 1.6],
+      [24.8, 13.4, 2.3],
+      [21.0, 12.6, 1.3],
+      [26.9, 14.9, 1.5],
+      [25.6, 16.2, 0.9],
+      [26.9, 18.6, 0.7],
+      [25.4, 18.9, 0.5],
+    ])
+      edificio(bx, by, 0.85, 0.85, bh);
+
+    // Edificio Coltejer: torre esbelta con remate en forma de aguja
+    const fachadaClara = new THREE.MeshStandardMaterial({ map: tVentanas, color: "#E2E8F0", emissive: "#FDE68A", emissiveMap: tVentanas, emissiveIntensity: 0.4, roughness: 0.5 });
+    recursos.push(fachadaClara);
+    edificio(26.2, 12.4, 1.0, 1.0, 4.0, fachadaClara);
+    const geoAguja = new THREE.ConeGeometry(0.71, 1.3, 4, 1, true);
+    recursos.push(geoAguja);
+    const aguja = new THREE.Mesh(geoAguja, mat("#CBD5E1", { side: THREE.DoubleSide, metalness: 0.3, roughness: 0.4 }));
+    aguja.rotation.y = Math.PI / 4;
+    aguja.position.set(X(26.7), 4.65, Z(12.9));
+    aguja.castShadow = true;
+    salida.add(aguja);
+    // el "ojo" de la aguja: una ranura iluminada en el remate
+    const ojo = new THREE.Mesh(geoCaja, mat("#FDE68A", { emissive: "#FDE68A", emissiveIntensity: 1.2 }));
+    ojo.scale.set(0.12, 0.5, 0.02);
+    ojo.position.set(X(26.7), 4.75, Z(13.25));
+    salida.add(ojo);
+    const espiga = new THREE.Mesh(geoCaja, mat("#94A3B8"));
+    espiga.scale.set(0.05, 0.6, 0.05);
+    espiga.position.set(X(26.7), 5.6, Z(12.9));
+    salida.add(espiga);
+    lugares.push({ texto: "Edificio Coltejer", x: 26.7, y: 12.9, z: 6.1 });
+
+    // Centro Administrativo La Alpujarra: Gobernación, Alcaldía y la plaza con el Monumento a la Raza
+    const fachadaGris = new THREE.MeshStandardMaterial({ map: tVentanas, color: "#CBD5E1", emissive: "#FDE68A", emissiveMap: tVentanas, emissiveIntensity: 0.35, roughness: 0.7 });
+    recursos.push(fachadaGris);
+    edificio(21.0, 14.4, 2.5, 1.1, 2.7, fachadaGris);
+    for (let k = 0; k <= 8; k++) caja(21.0 + k * 0.3, 15.5, 0, 0.06, 0.08, 2.7, "#F1F5F9", salida, undefined, false); // aletas verticales
+    caja(20.95, 14.35, 2.7, 2.6, 1.2, 0.12, "#E2E8F0", salida);
+    lugares.push({ texto: "Gobernación de Antioquia", x: 21.5, y: 14.95, z: 3.5 });
+
+    edificio(21.0, 17.6, 2.9, 1.5, 1.5, fachadaGris);
+    for (const hz of [0.45, 0.9, 1.35]) caja(20.98, 19.1, hz, 2.94, 0.06, 0.08, "#F8FAFC", salida, undefined, false); // franjas horizontales
+    caja(20.95, 17.55, 1.5, 3.0, 1.6, 0.1, "#E2E8F0", salida);
+    lugares.push({ texto: "Alcaldía de Medellín", x: 22.45, y: 18.7, z: 1.9 });
+
+    caja(21.0, 15.75, 0, 3.3, 1.7, 0.05, "#94A3B8", salida, undefined, false); // plaza
+    const curva = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0.05, 0.6, 0.05),
+      new THREE.Vector3(-0.1, 1.2, 0.15),
+      new THREE.Vector3(0.12, 1.8, 0.05),
+      new THREE.Vector3(0.35, 2.2, -0.15),
+    ]);
+    const geoMonumento = new THREE.TubeGeometry(curva, 40, 0.09, 10, false);
+    recursos.push(geoMonumento);
+    const monumento = new THREE.Mesh(geoMonumento, mat("#B7793E", { metalness: 0.45, roughness: 0.35 }));
+    monumento.position.set(X(23.4), 0.05, Z(16.6));
+    monumento.castShadow = true;
+    salida.add(monumento);
+    caja(23.2, 16.4, 0.05, 0.4, 0.4, 0.12, "#64748B", salida);
+    lugares.push({ texto: "La Alpujarra", x: 23.6, y: 16.6, z: 2.7 });
+
+    for (const l of lugares) {
+      const div = document.createElement("div");
+      div.className = "etiqueta-3d-lugar";
+      div.textContent = l.texto;
+      const o = new CSS2DObject(div);
+      o.position.set(X(l.x), l.z, Z(l.y));
+      salida.add(o);
     }
     const tLetrero = textura((ctx, w, h) => {
       ctx.fillStyle = AZUL;
@@ -791,7 +965,7 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
       ctx.font = `800 58px ${FUENTE}`;
       ctx.fillText("SALIDA A PULSO · EN VIVO →", 48, 86);
     });
-    cartel(tLetrero, 7.2, 0.9, new THREE.Vector3(X(20.2 + 3.6), 0.06, Z(11.7)), ACOSTADO, salida, true);
+    cartel(tLetrero, 7.2, 0.9, new THREE.Vector3(X(20.6 + 3.6), 0.06, Z(19.6)), ACOSTADO, salida, true);
   }
   const faros: THREE.Mesh[] = [];
   {
@@ -799,9 +973,9 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
     const geoFaro = new THREE.SphereGeometry(0.16, 16, 12);
     recursos.push(geoAnillo, geoFaro);
     for (const [fx, fy] of [
-      [20.6, 19.2],
-      [27.2, 11.8],
-      [27.0, 19.4],
+      [20.9, 11.6],
+      [24.4, 11.5],
+      [27.4, 11.6],
     ]) {
       const f = new THREE.Mesh(geoFaro, mat("#34D399", { emissive: "#34D399", emissiveIntensity: 1.6 }));
       f.position.set(X(fx), 0.2, Z(fy));
@@ -930,7 +1104,8 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
   const largo = curva.getLength();
   function cuadro() {
     raf = requestAnimationFrame(cuadro);
-    const t = reloj.getElapsedTime();
+    const dt = Math.min(0.05, reloj.getDelta());
+    const t = reloj.elapsedTime;
     if (!op.reducido) {
       if (!tocado) {
         // vaivén suave de la maqueta hasta que la persona la gire
@@ -938,7 +1113,7 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
         camara.position.setFromSpherical(esf).add(objetivo);
         camara.lookAt(objetivo);
       }
-      agentes.forEach((a) => (a.g.position.y = Math.sin(t * 2 + a.fase) * 0.025));
+      agentes.forEach((a) => moverAgente(a, dt, t));
       plantas.forEach((p, i) => (p.rotation.z = Math.sin(t * 0.8 + i) * 0.03));
       paquetes.forEach((p, i) => {
         const u = ((t * 2.2) / largo + i / paquetes.length) % 1;
@@ -956,6 +1131,7 @@ export function crearOficina3D(contenedor: HTMLElement, op: OpcionesOficina3D): 
         camara.position.setFromSpherical(esf).add(objetivo);
         camara.lookAt(objetivo);
       }
+      agentes.forEach((ag) => moverAgente(ag, 0, 0));
       paquetes.forEach((p, i) => {
         const pos = curva.getPointAt(i / paquetes.length);
         p.position.set(pos.x, 0.16, pos.z);

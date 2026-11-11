@@ -305,3 +305,53 @@ body {
     font-size: 10.5px;
   }
 }
+.etiqueta-3d-lugar {
+  transform: translateY(-2px);
+  border-radius: 6px;
+  background: rgba(11, 18, 32, 0.82);
+  padding: 2px 7px;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #e0f2fe;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@container (max-width: 560px) {
+  .etiqueta-3d-lugar {
+    display: none;
+  }
+}
+
+/* Rutina de los agentes en la vista 2D: sentado → se levanta → camina → tablero → vuelve */
+.agente-ronda {
+  animation-name: ronda;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes ronda {
+  0%,
+  34% {
+    transform: translate(0, var(--sit));
+  }
+  38% {
+    transform: translate(0, 0);
+  }
+  46% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  54%,
+  70% {
+    transform: translate(var(--x2), var(--y2));
+  }
+  78% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  86% {
+    transform: translate(0, 0);
+  }
+  90%,
+  100% {
+    transform: translate(0, var(--sit));
+  }
+}
