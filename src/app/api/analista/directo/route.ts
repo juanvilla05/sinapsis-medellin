@@ -4,7 +4,8 @@ import { cabecerasLimite, ipCliente, limitar } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
-const LIMITE_DIRECTO_POR_HORA = 60;
+// Alto a propósito: el modo directo no usa IA y es el respaldo del chat cuando se pasa su tope.
+const LIMITE_DIRECTO_POR_HORA = 300;
 
 const esquema = z.object({
   herramienta: z.enum(NOMBRES),
