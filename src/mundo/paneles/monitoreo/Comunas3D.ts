@@ -346,7 +346,7 @@ export async function montarComunas3D(op: Opciones3D): Promise<Api3D> {
     raf = 0;
     if (destruido) return;
     if (animando) {
-      const t = reducido ? 1 : Math.min(1, (ahora - t0) / DURACION_MS);
+      const t = reducido ? 1 : Math.max(0, Math.min(1, (ahora - t0) / DURACION_MS));
       const k = suavizar(t);
       for (const c of comunas) {
         c.alturaActual = c.alturaDesde + (c.alturaHasta - c.alturaDesde) * k;

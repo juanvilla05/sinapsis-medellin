@@ -20,7 +20,7 @@ export function useEntrada<T extends Element>(): [RefObject<T | null>, number, (
       if (quieto) return setP(1);
       const t0 = performance.now();
       const paso = (n: number) => {
-        const t = Math.min(1, (n - t0) / 1500);
+        const t = Math.max(0, Math.min(1, (n - t0) / 1500));
         setP(1 - Math.pow(1 - t, 3));
         if (t < 1) raf.current = requestAnimationFrame(paso);
       };
