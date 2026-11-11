@@ -214,6 +214,14 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     [asegurarComunas, asegurarTablas, asegurarRejillas, dato],
   );
 
+  /** Vista general: cierra la tarjeta, suelta la comuna y vuelve a los puntos calientes (en "una comuna" sin comuna no se vería nada). */
+  function volverAlInicio() {
+    setSel(null);
+    setComunaResaltada(null);
+    setVista("puntos");
+    motorRef.current?.vistaInicial();
+  }
+
   /** Elegir una comuna desde el selector o la tarjeta: la resalta, abre su tarjeta y vuela a ella. */
   const elegirComuna = (codigo: string) => {
     setComunaResaltada(codigo);
@@ -307,8 +315,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         else recorridoPendiente.current = e.activo;
         break;
       case "vista-inicial":
-        setSel(null);
-        motorRef.current?.vistaInicial();
+        volverAlInicio();
         break;
     }
   });
@@ -474,7 +481,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     : null;
 
   const alternarRecorrido = () => motorRef.current?.fijarRecorrido(!recorrido.girando);
-  const vistaInicial = () => motorRef.current?.vistaInicial();
+  const vistaInicial = () => volverAlInicio();
   const verPeor = () => {
     const c = resumen?.peor?.codigo;
     if (c == null) return;
