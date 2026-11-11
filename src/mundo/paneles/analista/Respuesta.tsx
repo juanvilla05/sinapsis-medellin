@@ -465,7 +465,7 @@ export default function Respuesta({
       cuerpo = <CuerpoGenerico datos={d} />;
   }
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-[#E3EAF3] bg-white p-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-[#E3EAF3] bg-white p-4 text-[#0F172A]">
       <span className="text-[11px] font-bold uppercase tracking-wide text-[#475569]">{NOMBRES_HERRAMIENTAS[herramienta]}</span>
       {cuerpo}
       {respuesta.nota && <p className="m-0 text-[12px] leading-snug text-[#475569]">{respuesta.nota}</p>}

@@ -66,7 +66,7 @@ export default function OficinaEscena({
     const desde = [...vbRef.current];
     const t0 = performance.now();
     const paso = (ahora: number) => {
-      const t = Math.min(1, (ahora - t0) / 620);
+      const t = Math.max(0, Math.min(1, (ahora - t0) / 620));
       const e = suave(t);
       vbRef.current = desde.map((v, i) => v + (destino[i] - v) * e);
       poner(vbRef.current);
