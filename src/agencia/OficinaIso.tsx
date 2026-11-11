@@ -38,6 +38,7 @@ export const SALAS: Sala[] = [
   { id: "monitoreo", num: "05", nombre: "Sala de Monitoreo", x: 20.75, y: 0, w: 7.25, d: 7.2, tinte: "#EAF8F1", borde: "#A7E3C7", acento: "#059669" },
   { id: "ventanilla", num: "03", nombre: "Ventanilla de Apertura", x: 0, y: 8.6, w: 7, d: 5.4, tinte: "#F3F0FE", borde: "#CABDFA", acento: "#7C3AED" },
   { id: "analista", num: "04", nombre: "Analista · PulsoBot", x: 0, y: 14.6, w: 7, d: 5.4, tinte: "#EDF4FF", borde: "#B9D3FB", acento: AZUL },
+  { id: "comunicaciones", num: "06", nombre: "Comunicaciones", x: 8.4, y: 17.2, w: 9.4, d: 2.8, tinte: "#FFF4ED", borde: "#FDC9A9", acento: "#C2410C" },
 ];
 
 const salaDe = (id: IdArea) => SALAS.find((s) => s.id === id)!;
@@ -101,7 +102,7 @@ function Planta({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
 
 /**
  * Rutina de cada agente en la vista 2D: se levanta del puesto, pasa por un punto intermedio, se queda frente a su
- * tablero o pantalla y vuelve. Es la misma ruta de la maqueta 3D (escena3d.ts), animada con CSS.
+ * tablero o pantalla y vuelve. Animada con CSS (agente-ronda en globals.css).
  */
 const RUTAS_2D: Record<string, { base: [number, number]; lado: [number, number]; tablero: [number, number]; sentado: boolean; dur: number; retraso: number }> = {
   reloj: { base: [9.2, 2.95], lado: [10.7, 2.95], tablero: [11.4, 1.05], sentado: true, dur: 24, retraso: 0 },
@@ -109,6 +110,7 @@ const RUTAS_2D: Record<string, { base: [number, number]; lado: [number, number];
   monitoreo: { base: [24.35, 3.45], lado: [26.0, 3.4], tablero: [25.3, 1.05], sentado: true, dur: 26, retraso: -11 },
   ventanilla: { base: [2.9, 11.2], lado: [2.0, 10.8], tablero: [1.05, 10.4], sentado: false, dur: 22, retraso: -3 },
   analista: { base: [3.65, 16.5], lado: [2.1, 16.4], tablero: [1.15, 17.3], sentado: true, dur: 25, retraso: -15 },
+  comunicaciones: { base: [12.2, 18.2], lado: [14.0, 18.25], tablero: [15.6, 18.45], sentado: true, dur: 23, retraso: -9 },
   guia: { base: [13.5, 12.55], lado: [12.4, 12.4], tablero: [14.7, 12.4], sentado: false, dur: 16, retraso: -5 },
 };
 
@@ -653,24 +655,29 @@ export default function OficinaIso({
         <Bloque x={9.6} y={15.6} w={1.2} d={1.2} h={0.42} tapa="#FFFFFF" izq="#E2E8F0" der="#CBD5E1" />
       </g>
 
-      {/* cafetería */}
-      <g pointerEvents="none">
-        <polygon points={rect(8.4, 17.3, 9.6, 2.5)} fill="#F1F5F9" stroke="#E2E8F0" strokeWidth={1.2} />
-        <Bloque x={9.2} y={17.6} w={4.6} d={0.9} h={0.95} tapa="#FFFFFF" izq="#DBEAFE" der="#BFDBFE" />
-        <Bloque x={9.5} y={17.7} z={0.95} w={0.65} d={0.55} h={0.7} tapa="#334155" izq="#1E293B" der="#0B1220" />
-        <circle cx={p(9.85, 18.25, 1.25)[0]} cy={p(9.85, 18.25, 1.25)[1]} r={1.8} fill="#34D399" className="led-parpadea-lento" />
-        {[10.8, 11.5, 12.6].map((x, i) => {
-          const [tx, ty] = p(x, 18.0, 0.95);
-          return <path key={x} d={`M${tx - 3},${ty - 7} h6 l-0.8,7 h-4.4 Z`} fill={i === 1 ? "#2563EB" : "#FFFFFF"} stroke="#94A3B8" strokeWidth={0.7} />;
-        })}
-        {[9.8, 11.2, 12.6].map((x) => (
-          <Bloque key={x} x={x} y={18.9} w={0.5} d={0.5} h={0.62} tapa="#2563EB" izq="#1D4ED8" der="#1E3A8A" />
+      {/* 06 · Comunicaciones */}
+      <Interactiva id="comunicaciones" etiqueta={etiqueta("comunicaciones", "06 Comunicaciones")} activa={enfocado === "comunicaciones"} onAbrir={onAbrir}>
+        <Alfombra s={salaDe("comunicaciones")} />
+        {/* exhibidor con informes */}
+        <Bloque x={8.9} y={17.5} w={0.9} d={0.5} h={1.3} tapa="#FFFFFF" izq="#FED7AA" der="#FDBA74" />
+        {[0.35, 0.75, 1.1].map((z, k) => (
+          <polygon key={z} points={pts([[9.0, 18.0, z], [9.7, 18.0, z], [9.7, 18.0, z + 0.28], [9.0, 18.0, z + 0.28]])} fill={["#FFFFFF", "#FFEDD5", "#DBEAFE"][k]} stroke="#FB923C" strokeWidth={0.6} />
         ))}
-        <Bloque x={15.2} y={17.7} w={0.7} d={0.7} h={1.05} tapa="#F8FAFC" izq="#E2E8F0" der="#CBD5E1" />
-        <Bloque x={15.35} y={17.85} z={1.05} w={0.4} d={0.4} h={0.55} tapa="#BAE6FD" izq="#7DD3FC" der="#38BDF8" linea="#0284C733" />
-        <Planta x={16.7} y={18.4} s={1} />
-        <Rotulo x={13.9} y={19.55} texto="Cafetería" color="#64748B" />
-      </g>
+        {/* impresora con hojas que salen */}
+        <Bloque x={15.2} y={17.45} w={1.0} d={0.75} h={0.8} tapa="#E2E8F0" izq="#CBD5E1" der="#94A3B8" />
+        <Bloque x={15.3} y={17.5} z={0.8} w={0.8} d={0.55} h={0.22} tapa="#334155" izq="#1E293B" der="#0B1220" />
+        <g className="hoja-imprime">
+          <polygon points={rect(15.4, 17.95, 0.6, 0.5, 0.82)} fill="#FFFFFF" stroke="#CBD5E1" strokeWidth={0.6} />
+          <line x1={p(15.5, 18.1, 0.83)[0]} y1={p(15.5, 18.1, 0.83)[1]} x2={p(15.85, 18.1, 0.83)[0]} y2={p(15.85, 18.1, 0.83)[1]} stroke="#C2410C" strokeWidth={1.2} />
+        </g>
+        <circle cx={p(16.2, 17.8, 0.65)[0]} cy={p(16.2, 17.8, 0.65)[1]} r={1.8} fill="#34D399" className="led-parpadea-lento" />
+        <Silla x={11.8} y={17.4} color="#C2410C" />
+        <Agente id="comunicaciones" x={12.2} y={18.2} />
+        <Escritorio x={11.0} y={18.55} w={2.4} d={0.95} lados={["#FFEDD5", "#FDC9A9"]} />
+        <Monitor x={11.75} y={18.62} />
+        <Planta x={17.0} y={18.9} s={0.85} />
+        <Rotulo x={8.7} y={19.72} num="06" texto="Comunicaciones" color="#C2410C" />
+      </Interactiva>
 
       {/* 04 · Analista (PulsoBot) */}
       <Interactiva id="analista" etiqueta={etiqueta("analista", "04 Analista, PulsoBot")} activa={enfocado === "analista"} onAbrir={onAbrir}>
@@ -750,6 +757,11 @@ export default function OficinaIso({
       <g onClick={() => onAbrir("analista")} className="cursor-pointer">
         <Ronda id="analista">
           <Etiqueta x={3.65} y={16.5} nombre="PulsoBot" info={agentes.analista} />
+        </Ronda>
+      </g>
+      <g onClick={() => onAbrir("comunicaciones")} className="cursor-pointer">
+        <Ronda id="comunicaciones">
+          <Etiqueta x={12.2} y={18.2} nombre="Vocera" info={agentes.comunicaciones} />
         </Ronda>
       </g>
       <Ronda id="guia">

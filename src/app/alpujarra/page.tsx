@@ -6,6 +6,7 @@ import resumen from "@/data/resumen-catalogo.json";
 import type { ConjuntoAuditado, ResumenCatalogo } from "@/lib/catalogo";
 import { cargarSeguridadVial } from "@/lib/monitoreo/cargar";
 import { construirPropuestas } from "@/lib/ventanilla";
+import { construirVisuales } from "@/lib/visuales";
 
 export const metadata: Metadata = { title: "Agencia de datos · La oficina detrás del mapa" };
 
@@ -20,5 +21,5 @@ export default async function Agencia() {
   const seguridad = await cargarSeguridadVial();
   const propuestas = construirPropuestas(catalogo as ConjuntoAuditado[]).length;
   const datos = construirDatosMundo(resumen as ResumenCatalogo, { seguridad, propuestas });
-  return <AgenciaDatos resumen={resumen as ResumenCatalogo} opcionesLab={opcionesLab} datos={datos} />;
+  return <AgenciaDatos resumen={resumen as ResumenCatalogo} opcionesLab={opcionesLab} datos={datos} visuales={construirVisuales(catalogo as ConjuntoAuditado[])} />;
 }

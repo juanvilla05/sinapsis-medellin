@@ -1,5 +1,5 @@
 /** Despachos de la Agencia de datos (oficina 2D). */
-export type IdArea = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo";
+export type IdArea = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo" | "comunicaciones";
 
 export interface AreaMundo {
   id: IdArea;
@@ -44,6 +44,14 @@ export const AREAS_MUNDO: AreaMundo[] = [
     descripcion:
       "Seguridad vial y seguridad para moverse por barrio, sobre el mapa de Medellín por comunas, con datos limpios.",
     bloques: ["Mapa por comunas", "Seguridad vial", "Moverse por barrio"],
+  },
+  {
+    id: "comunicaciones",
+    num: "06",
+    nombre: "Comunicaciones",
+    rol: "Vocera",
+    enConstruccion: false,
+    descripcion: "Informes en PDF por secretaría y datos en CSV, listos para entregar.",
   },
 ];
 

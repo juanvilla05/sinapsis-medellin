@@ -21,6 +21,7 @@ export const LOOKS: Record<string, Look> = {
   lab: { piel: "#6E4430", pelo: "#16100D", peinado: "rizos", traje: "#1E2A44", camisa: "#9FB6DA", bata: true, gafas: true },
   ventanilla: { piel: "#C48A62", pelo: "#1A1310", peinado: "corto", traje: "#6D28D9", camisa: "#F7F5F0", corbata: "#1E2A44" },
   analista: { piel: "#EFCDB0", pelo: "#6A3720", peinado: "bob", traje: "#1D4ED8", camisa: "#E0ECFF", diadema: true, falda: true },
+  comunicaciones: { piel: "#D9A07A", pelo: "#3B2314", peinado: "largo", traje: "#C2410C", camisa: "#FFF7ED", falda: true, gafas: true },
   monitoreo: { piel: "#5A3826", pelo: "#120D0A", peinado: "mono", traje: "#065F46", camisa: "#D1FAE5", corbata: "#0B1220" },
 };
 
