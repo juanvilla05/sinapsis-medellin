@@ -30,6 +30,16 @@ describe("intérprete sin IA", () => {
     assert.deepEqual(de("abre el laboratorio"), { herramienta: "controlarApp", args: { accion: "ir-a", seccion: "laboratorio" } });
     assert.deepEqual(de("inicia el recorrido"), { herramienta: "controlarApp", args: { accion: "recorrido", activo: true } });
   });
+  it("vistas del mapa", () => {
+    assert.deepEqual(de("muéstrame Medellín por comunas"), { herramienta: "controlarApp", args: { accion: "vista", vista: "comunas" } });
+    assert.deepEqual(de("quiero ver los hurtos por comunas, sin tantas barras"), { herramienta: "controlarApp", args: { accion: "vista", vista: "comunas", capa: "hurto" } });
+    assert.deepEqual(de("muéstrame solo Belén"), { herramienta: "controlarApp", args: { accion: "vista", vista: "una-comuna", comuna: "Belén" } });
+    assert.deepEqual(de("enfócate en la comuna 14 y muestra las víctimas"), { herramienta: "controlarApp", args: { accion: "vista", vista: "una-comuna", comuna: "14", capa: "victimas" } });
+    assert.deepEqual(de("vuelve a mostrar los puntos calientes"), { herramienta: "controlarApp", args: { accion: "vista", vista: "puntos" } });
+    // preguntar por un dato "por comuna" sigue siendo una consulta, no un cambio de vista
+    assert.equal(de("hurtos por comuna en 2022")?.herramienta, "consultarHurtoComuna");
+    assert.equal(de("¿Qué comunas tienen más incidentes viales?")?.herramienta, "consultarSeguridadVial");
+  });
   it("catálogo, ayuda y desconocido", () => {
     assert.deepEqual(de("¿Qué secretaría tiene más conjuntos atrasados?"), { herramienta: "consultarFrescura", args: { limite: 5 } });
     assert.deepEqual(de("¿Cuántos conjuntos de Movilidad están al día?"), { herramienta: "consultarFrescura", args: { secretaria: "Movilidad" } });

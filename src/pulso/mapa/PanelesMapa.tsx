@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type { ResumenAire } from "@/lib/aire";
 import { CATEGORIAS, ORDEN_CATEGORIAS, categoriaICA } from "@/lib/ica";
 import { useTema } from "../tema";
-import type { CapaPulso } from "../tipos";
+import type { CapaPulso, VistaPulso } from "../tipos";
 import {
   CORTO_CAPA,
   gradienteCss,
@@ -169,6 +169,115 @@ export function LeyendaComunas() {
   return null;
 }
 
+/** Escala de la vista por comunas: de la comuna con menos casos a la que más, con la misma rampa. */
+export function LeyendaComunasValor({ minimo, maximo }: { minimo: number; maximo: number }) {
+  const tema = useTema();
+  return (
+    <div className="space-y-1" aria-label={`Escala de color: de ${numero(minimo)} a ${numero(maximo)} casos por comuna`}>
+      <div className="h-2.5 rounded-full" style={{ background: gradienteCss(tema) }} aria-hidden="true" />
+      <p className="flex justify-between text-[12.5px] tabular-nums text-tinta/75">
+        <span>{numero(minimo)} por comuna</span>
+        <span>{numero(maximo)}</span>
+      </p>
+    </div>
+  );
+}
+
+/* ───────── selector de vista: cómo se pinta el dato ───────── */
+
+const VISTAS: { v: VistaPulso; nombre: string; pista: string; icono: ReactNode }[] = [
+  {
+    v: "puntos",
+    nombre: "Puntos",
+    pista: "Columnas de 250 m",
+    icono: (
+      <>
+        <rect x="2" y="9" width="3" height="5" rx="0.6" fill="currentColor" />
+        <rect x="6.5" y="4" width="3" height="10" rx="0.6" fill="currentColor" />
+        <rect x="11" y="7" width="3" height="7" rx="0.6" fill="currentColor" />
+      </>
+    ),
+  },
+  {
+    v: "comunas",
+    nombre: "Comunas",
+    pista: "Toda la ciudad por comunas",
+    icono: <path d="M2 3.5 6.5 2l3 1.5L14 2v10.5L9.5 14l-3-1.5L2 14ZM6.5 2v10.5M9.5 3.5V14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />,
+  },
+  {
+    v: "una",
+    nombre: "Una comuna",
+    pista: "Solo la que elijas",
+    icono: (
+      <>
+        <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+        <circle cx="8" cy="8" r="2" fill="currentColor" />
+      </>
+    ),
+  },
+];
+
+export function SelectorVista({
+  vista,
+  onVista,
+  comunas,
+  comuna,
+  onComuna,
+}: {
+  vista: VistaPulso;
+  onVista: (v: VistaPulso) => void;
+  comunas: ComunaMapa[] | null;
+  comuna: string | null;
+  onComuna: (codigo: string) => void;
+}) {
+  return (
+    <section aria-label="Cómo ver los datos en el mapa" className={`${vidrio} p-1.5`}>
+      <div role="radiogroup" aria-label="Vista del mapa" className="grid grid-cols-3 gap-1">
+        {VISTAS.map((x) => {
+          const activa = x.v === vista;
+          return (
+            <button
+              key={x.v}
+              type="button"
+              role="radio"
+              aria-checked={activa}
+              title={x.pista}
+              onClick={() => onVista(x.v)}
+              className={`flex h-11 items-center justify-center gap-1 rounded-xl px-1 text-[12.5px] font-semibold sm:gap-1.5 sm:text-[13px] ${foco} ${activa ? "bg-[#2563EB] text-white shadow" : "text-tinta/80 hover:bg-tinta/10"}`}
+            >
+              <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0" aria-hidden="true">
+                {x.icono}
+              </svg>
+              <span className="whitespace-nowrap">{x.nombre}</span>
+            </button>
+          );
+        })}
+      </div>
+      {vista === "una" && (
+        <label className="mt-1.5 block">
+          <span className="sr-only">Comuna o corregimiento</span>
+          <select
+            value={comuna ?? ""}
+            onChange={(e) => e.target.value && onComuna(e.target.value)}
+            disabled={!comunas}
+            className={`h-11 w-full rounded-xl border border-tinta/15 bg-fondo px-3 text-[14px] font-semibold text-tinta ${foco}`}
+          >
+            <option value="">{comunas ? "Elige una comuna o tócala en el mapa" : "Cargando comunas…"}</option>
+            {(comunas ?? [])
+              .slice()
+              .sort((a, b) => a.codigo.localeCompare(b.codigo))
+              .map((c) => (
+                <option key={c.codigo} value={c.codigo}>
+                  {c.corregimiento ? c.etiqueta : `${Number(c.codigo)} · ${c.etiqueta}`}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
+    </section>
+  );
+}
+
 /* ───────── panel de capas (escritorio) y chips (móvil) ───────── */
 
 const CAPAS_ORDEN: CapaPulso[] = ["aire", "incidentes", "victimas", "hurto", "comunas"];
@@ -190,6 +299,8 @@ function Interruptor({ activo }: { activo: boolean }) {
 }
 
 export interface PropsCapas {
+  /** en las vistas por comunas la capa "Comunas" siempre está dibujada: no se ofrece como interruptor */
+  vista: VistaPulso;
   capas: Record<CapaPulso, boolean>;
   info: Record<CapaPulso, InfoCapa>;
   onCambiar: (c: CapaPulso, visible: boolean) => void;
@@ -249,7 +360,7 @@ export function PanelCapas(p: PropsCapas) {
       {!p.plegado && (
         <div className="min-h-0 overflow-y-auto px-2 pb-2 [scrollbar-width:thin]">
           <ul className="space-y-1">
-            {CAPAS_ORDEN.map((c) => {
+            {CAPAS_ORDEN.filter((c) => c !== "comunas" || p.vista === "puntos").map((c) => {
               const i = p.info[c];
               const activa = p.capas[c];
               const sub = textoFase(i, activa);
@@ -298,7 +409,7 @@ export function ChipsCapas(p: PropsCapas & { foco: CapaPulso | null }) {
         {enFoco && info && p.leyendas[enFoco] && <div className={`${vidrio} min-w-0 flex-1 px-3 py-2`}>{p.leyendas[enFoco]}</div>}
       </div>
       <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]" role="group" aria-label="Capas del mapa">
-        {CAPAS_ORDEN.map((c) => {
+        {CAPAS_ORDEN.filter((c) => c !== "comunas" || p.vista === "puntos").map((c) => {
           const activa = p.capas[c];
           const i = p.info[c];
           return (
@@ -334,7 +445,7 @@ export function ChipsCapas(p: PropsCapas & { foco: CapaPulso | null }) {
 
 /* ───────── tooltip y tarjeta de detalle ───────── */
 
-function lineasObjeto(o: ObjetoMapa, rejillas: Partial<Record<string, RejillaMapa | null>>): { titulo: string; lineas: string[] } {
+function lineasObjeto(o: ObjetoMapa, rejillas: Partial<Record<string, RejillaMapa | null>>, datoComuna?: (codigo: string) => string | null): { titulo: string; lineas: string[] } {
   switch (o.tipo) {
     case "estacion": {
       const e = o.estacion;
@@ -356,7 +467,7 @@ function lineasObjeto(o: ObjetoMapa, rejillas: Partial<Record<string, RejillaMap
       };
     }
     case "comuna":
-      return { titulo: o.nombre, lineas: [Number(o.codigo) >= 50 ? `Corregimiento · código ${o.codigo}` : `Comuna ${o.codigo}`] };
+      return { titulo: o.nombre, lineas: [datoComuna?.(o.codigo) ?? (Number(o.codigo) >= 50 ? `Corregimiento · código ${o.codigo}` : `Comuna ${o.codigo}`)] };
     case "ruta": {
       const r = o.ruta;
       return {
@@ -370,8 +481,8 @@ function lineasObjeto(o: ObjetoMapa, rejillas: Partial<Record<string, RejillaMap
   }
 }
 
-export function Tooltip({ pasada, rejillas }: { pasada: Pasada; rejillas: Partial<Record<string, RejillaMapa | null>> }) {
-  const { titulo, lineas } = lineasObjeto(pasada.objeto, rejillas);
+export function Tooltip({ pasada, rejillas, datoComuna }: { pasada: Pasada; rejillas: Partial<Record<string, RejillaMapa | null>>; datoComuna?: (codigo: string) => string | null }) {
+  const { titulo, lineas } = lineasObjeto(pasada.objeto, rejillas, datoComuna);
   const arriba = pasada.y > 140;
   return (
     <div

@@ -94,6 +94,16 @@ export function interpretar(pregunta: string): Intencion | null {
   if (/\b(recorrido|gira|rota|tour|sobrevuel)/.test(t)) return { herramienta: "controlarApp", args: { accion: "recorrido", activo: !/\b(para|deten|quita|apaga|pausa|no)\b/.test(t) } };
   if (/\b(vista inicial|centra|reinicia el mapa|vuelve al inicio|vista general|aleja)/.test(t)) return { herramienta: "controlarApp", args: { accion: "vista-inicial" } };
   if (/\b(limpia|borra|quita)\b.*\bruta/.test(t)) return { herramienta: "controlarApp", args: { accion: "limpiar-rutas" } };
+  // vistas del mapa: por comunas, una sola comuna o puntos calientes
+  const datoVista = CAPAS.find(([r, c]) => c !== "comunas" && c !== "aire" && r.test(t))?.[1];
+  const conDato = datoVista ? { capa: datoVista } : {};
+  const pideVer = /\b(muestra|muestrame|mostrar|ver|verlo|veamos|pon|ponme|pinta|colorea|cambia|quiero|vista|mapa|ensena|ensename)\b/.test(t);
+  if (/\b(solo|solamente|unicamente|nada mas|enfoca|enfocate|aisla)\b/.test(t) && comuna && pideVer)
+    return { herramienta: "controlarApp", args: { accion: "vista", vista: "una-comuna", comuna, ...conDato } };
+  if (pideVer && /\b(por comunas?|mapa de comunas|vista de comunas|sin (tantas |las )?(barras|barritas|columnas))\b/.test(t))
+    return { herramienta: "controlarApp", args: { accion: "vista", vista: "comunas", ...conDato } };
+  if (pideVer && /\b(puntos calientes|por puntos|vista de puntos|en columnas|con columnas|las columnas|las barras)\b/.test(t))
+    return { herramienta: "controlarApp", args: { accion: "vista", vista: "puntos", ...conDato } };
   const verbo = /\b(muestra|muestrame|mostrar|activa|prende|enciende|ensena|ver|pon|quiero ver|oculta|esconde|quita|apaga|desactiva)\b/.exec(t);
   if (verbo && /\b(capa|mapa|columnas|puntos|faros)\b|\ben el mapa\b/.test(t)) {
     const capa = CAPAS.find(([r]) => r.test(t));

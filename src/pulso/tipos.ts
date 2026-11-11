@@ -9,6 +9,9 @@ export type TemaPulso = "oscuro" | "claro";
 /** Capas de datos del mapa 3D. */
 export type CapaPulso = "aire" | "incidentes" | "victimas" | "hurto" | "comunas";
 
+/** Cómo se pinta el dato: columnas de 250 m, comunas coloreadas o una sola comuna aislada. */
+export type VistaPulso = "puntos" | "comunas" | "una";
+
 export type BandaRuta = "buena" | "aceptable" | "danina" | "sin-dato";
 
 /** Una alternativa de ruta ya puntuada con datos de SIATA y MEData (la geometría viene de Google Routes). */
@@ -48,6 +51,7 @@ export type EventoPulso =
   | { tipo: "elegir-ruta"; id: string }
   | { tipo: "limpiar-rutas" }
   | { tipo: "capa"; capa: CapaPulso; visible: boolean }
+  | { tipo: "vista"; vista: VistaPulso }
   | { tipo: "panel"; panel: "rutas" | "bot" | null }
   | { tipo: "preguntar"; texto: string }
   | { tipo: "recorrido"; activo: boolean }
