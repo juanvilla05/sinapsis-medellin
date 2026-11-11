@@ -9,15 +9,14 @@ import { COLOR_AGENTE, COLOR_GLOBO, TEXTO_ESTADO_AGENTE, evaluarAgentes, type Ai
 import PanelReloj from "@/mundo/paneles/PanelReloj";
 import PanelLaboratorio, { type OpcionLab } from "@/mundo/paneles/PanelLaboratorio";
 import PanelVentanilla from "@/mundo/paneles/PanelVentanilla";
+import PanelComunicaciones from "@/mundo/paneles/PanelComunicaciones";
 import PanelMonitoreo from "@/mundo/paneles/PanelMonitoreo";
 import PanelAnalista from "@/mundo/paneles/PanelAnalista";
 import { MARCA } from "@/lib/marca";
-import dynamic from "next/dynamic";
 import OficinaIso, { SALAS } from "./OficinaIso";
+import VisualesAgencia from "./Visuales";
+import type { Visuales } from "@/lib/visuales";
 import Persona, { LOOKS } from "./Persona";
-
-/** La maqueta 3D se carga solo si la persona la pide (three.js no entra en la carga inicial). */
-const Oficina3D = dynamic(() => import("./Oficina3D"), { ssr: false });
 
 /** Nombre visible de cada agente en la Agencia. El Analista es el mismo asistente de PULSO: PulsoBot. */
 const NOMBRE: Record<IdArea, string> = {
@@ -26,6 +25,7 @@ const NOMBRE: Record<IdArea, string> = {
   ventanilla: "Funcionario de ventanilla",
   analista: "PulsoBot",
   monitoreo: "Operadora",
+  comunicaciones: "Vocera",
 };
 
 const isoValido = (v: unknown) => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
@@ -47,6 +47,7 @@ const ICONOS: Record<string, string> = {
   ventanilla: "M4 4h16v6H4zM4 14h7v6H4zM15 14h5M15 17h5M15 20h3",
   analista: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12ZM8.5 12h.01M12 12h.01M15.5 12h.01",
   monitoreo: "M3 12h4l2-5 4 10 2-5h6",
+  comunicaciones: "M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 18v-6M9 15l3 3 3-3",
   mapa: "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2ZM9 4v14M15 6v14",
   archivo: "M4 6c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2ZM4 6v12c0 1.1 3.6 2 8 2s8-.9 8-2V6M4 12c0 1.1 3.6 2 8 2s8-.9 8-2",
   equipo: "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM21 19v-1a4 4 0 0 0-3-3.9M15.5 4.1a3 3 0 0 1 0 5.8",
@@ -100,14 +101,13 @@ function Ramas({ className = "" }: { className?: string }) {
   );
 }
 
-export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen: ResumenCatalogo; opcionesLab: OpcionLab[]; datos: DatosMundo }) {
+export default function AgenciaDatos({ resumen, opcionesLab, datos, visuales }: { resumen: ResumenCatalogo; opcionesLab: OpcionLab[]; datos: DatosMundo; visuales: Visuales }) {
   const [panel, setPanel] = useState<IdArea | null>(null);
   const [enfocado, setEnfocado] = useState<IdArea | null>(null);
   const [rescatadas, setRescatadas] = useState(0);
   const [preguntas, setPreguntas] = useState(0);
   const [aire, setAire] = useState<AireAgente | null | undefined>(undefined);
   const [reducido, setReducido] = useState(false);
-  const [vista, setVista] = useState<"2d" | "3d">("2d");
   const cerrarRef = useRef<HTMLButtonElement>(null);
   const origenRef = useRef<HTMLElement | null>(null);
 
@@ -293,33 +293,17 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
                   </Link>
                 </li>
               </ol>
-              <div role="group" aria-label="Vista de la oficina" className="ml-auto flex rounded-lg border border-[#E3EAF3] bg-[#F4F7FB] p-0.5 text-[12px] font-bold">
-                {(["2d", "3d"] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setVista(v)}
-                    aria-pressed={vista === v}
-                    className={`rounded-md px-2.5 py-1 transition-colors ${vista === v ? "bg-[#0B1220] text-white" : "text-[#475569] hover:text-[#0B1220]"}`}
-                  >
-                    {v.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              <span className="flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-2.5 py-1 text-[11.5px] font-semibold text-[#15803D]">
+              <span className="ml-auto flex items-center gap-1.5 rounded-full bg-[#F0FDF4] px-2.5 py-1 text-[11.5px] font-semibold text-[#15803D]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#16A34A]" aria-hidden="true" />
                 {[trabajando > 0 && `${trabajando} trabajando`, teNecesitan > 0 && `${teNecesitan} te ${teNecesitan === 1 ? "necesita" : "necesitan"}`].filter(Boolean).join(" · ") ||
                   `${AREAS_MUNDO.length} agentes esperando`}
               </span>
             </div>
             <div className="bg-[linear-gradient(180deg,#F8FAFD_0%,#EEF3F9_100%)] px-1 pb-2 pt-3 sm:px-4">
-              {vista === "2d" ? (
-                <OficinaIso agentes={agentes} datos={datos} onAbrir={abrir} enfocado={enfocado} />
-              ) : (
-                <Oficina3D agentes={agentes} datos={datos} onAbrir={abrir} enfocado={enfocado} onFallo={() => setVista("2d")} />
-              )}
+              <OficinaIso agentes={agentes} datos={datos} onAbrir={abrir} enfocado={enfocado} />
             </div>
             <p className="border-t border-[#EEF2F7] px-4 py-2.5 text-center text-[12px] text-[#64748B] sm:px-5">
-              {vista === "2d" ? "Toca un despacho para abrir su herramienta." : "Gira la maqueta y toca un despacho para abrir su herramienta."} La salida azul lleva a PULSO, la ciudad en vivo.
+              Toca un despacho para abrir su herramienta. La salida azul lleva a PULSO, la ciudad en vivo.
             </p>
           </section>
 
@@ -361,6 +345,8 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
               Catálogo de MEData ({miles(resumen.totalConjuntos)} conjuntos), consultado el {fechaColombia(resumen.generado)}.
             </p>
           </section>
+
+          <VisualesAgencia visuales={visuales} />
 
           {/* equipo */}
           <section aria-labelledby="titulo-equipo" className="flex flex-col gap-3">
@@ -465,6 +451,7 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
             {areaPanel.id === "monitoreo" && <PanelMonitoreo datos={datos} modo="modal" />}
             {areaPanel.id === "analista" && <PanelAnalista modo="modal" onRespuesta={() => setPreguntas((n) => n + 1)} />}
             {areaPanel.id === "ventanilla" && <PanelVentanilla />}
+            {areaPanel.id === "comunicaciones" && <PanelComunicaciones />}
           </div>
         </div>
       )}

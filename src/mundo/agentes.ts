@@ -30,7 +30,7 @@ export interface AireAgente {
   capturado: string | null;
 }
 
-export type IdAgente = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo" | "guia";
+export type IdAgente = "reloj" | "lab" | "ventanilla" | "analista" | "monitoreo" | "comunicaciones" | "guia";
 
 export interface Agente {
   nombre: string;
@@ -136,6 +136,14 @@ export const AGENTES: Record<IdAgente, Agente> = {
     cifra: (d) => (d.aire === undefined ? "…" : d.aire === null ? "—" : miles(d.aire.validas)),
     // copia guardada = ámbar («sin señal»): el dato existe, pero SIATA no está respondiendo
     estado: (d) => (d.aire === undefined ? "esperando" : d.aire === null || d.aire.guardado ? "sin-senal" : "trabajando"),
+  },
+  comunicaciones: {
+    nombre: "Vocera",
+    rol: "Comunicaciones",
+    frase: (d) =>
+      `Preparo el informe de cada secretaría en PDF, con su diagnóstico y sus propuestas, y los datos en CSV. Hoy el ${decimal(d.pctAtrasados)} % de los conjuntos evaluables está atrasado: hay mucho que contar.`,
+    cifra: () => "PDF",
+    estado: () => "trabajando",
   },
   guia: {
     nombre: "Guía",
