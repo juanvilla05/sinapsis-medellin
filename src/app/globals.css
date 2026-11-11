@@ -327,3 +327,25 @@ body {
     background: #fff !important;
   }
 }
+
+/* PulsoBot: el parpadeo de los ojos, el mismo del Analista en la oficina de la Agencia */
+@keyframes pulsobot-parpadeo {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+.pulsobot-parpadeo {
+  animation: pulsobot-parpadeo 5s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulsobot-parpadeo {
+    animation: none;
+  }
+}
