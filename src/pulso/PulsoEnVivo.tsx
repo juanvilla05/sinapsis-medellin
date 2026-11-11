@@ -104,7 +104,7 @@ PulsoBot
 
       <PulsoBot />
 
-      <p className="pointer-events-none absolute bottom-1.5 left-1/2 z-10 hidden -translate-x-1/2 text-center text-[11.5px] text-tinta/55 sm:block">
+      <p className="pointer-events-none absolute bottom-1.5 left-1/2 z-10 hidden -translate-x-1/2 text-center text-[11.5px] text-tinta/55 md:block">
         PULSO Medellín · propuesta académica, no es un sitio oficial de la Alcaldía.
       </p>
     </div>
