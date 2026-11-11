@@ -8,6 +8,17 @@ Proyecto de la **Hackathon de Datos ITM 2026** · Isabela Zuluaga y Juan Camilo 
 
 En línea: **https://pulsomedellin.com** · Repositorio de entrega: [juanvilla05/sinapsis-medellin](https://github.com/juanvilla05/sinapsis-medellin), fork del repositorio original del equipo [zuluagaisabela/sinapsis-medellin](https://github.com/zuluagaisabela/sinapsis-medellin).
 
+## Entrega (Hackathon de Datos ITM 2026)
+
+| Archivo | Qué es |
+|---|---|
+| [`instrucciones.txt`](instrucciones.txt) | Cómo abrir o ejecutar el artefacto y qué debe ver el jurado (plantilla de las Reglas del juego) |
+| [`guia_entrega.pdf`](guia_entrega.pdf) | Guía de entrega diligenciada, con la ficha de hallazgos sobre MEData ([texto](docs/guia_entrega.md)) |
+| [`resumen_pitch.pdf`](resumen_pitch.pdf) | Resumen de una página para la final ([texto](docs/resumen_pitch.md)) |
+| [`LICENSE`](LICENSE) | Código MIT; los datos conservan la licencia de su fuente |
+
+Equipo PULSO Medellín · Ingeniería en Ciencia de Datos, Institución Universitaria ITM · categoría Interna · modalidad Visualización · temática Innovación y tecnología.
+
 ## Hallazgo principal
 
 **El 92,6 % de los conjuntos de MEData con periodicidad declarada lleva más de 1,5 veces ese plazo sin actualizarse** (313 de 338, según la fecha de modificación que publica el propio catálogo, consultado el 10 de noviembre de 2026).
@@ -16,8 +27,9 @@ En línea: **https://pulsomedellin.com** · Repositorio de entrega: [juanvilla05
 
 La portada es un **mapa 3D de Medellín** (MapLibre + deck.gl sobre OpenFreeMap, sin claves): faros de SIATA con el PM2.5 en vivo, columnas de 250 m de incidentes, víctimas y hurto de MEData, y comunas oficiales. Encima flotan:
 
+- **Tres vistas del mismo dato** (selector bajo el aire): *Puntos* (columnas de 250 m), *Comunas* (toda la ciudad por comunas, sin columnas: color y altura según el total de la comuna) y *Una comuna* (solo la elegida, con sus columnas). La tarjeta de comuna trae el total, su parte de la ciudad, la serie por año, el desglose y el aire de SIATA. Totales desde las tablas por comuna de MEData, con conteos de 1 a 4 suprimidos (`src/pulso/mapa/fichas.ts`).
 - **Rutas inteligentes**: Google Routes calcula las alternativas y PULSO las compara por aire (SIATA) y siniestralidad histórica (MEData).
-- **PulsoBot**: el asistente, disponible 24/7. Se le escribe o se conversa con él por voz de corrido; responde con la cifra y su fuente, mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta) y maneja la plataforma (capas, tema, recorrido, secciones). Sin IA entiende las preguntas con un intérprete propio.
+- **PulsoBot**: el asistente, disponible 24/7. Se le escribe o se conversa con él por voz de corrido; responde con la cifra y su fuente, mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta) y maneja la plataforma (capas, vistas, tema, recorrido, secciones): "muéstrame Medellín por comunas", "muéstrame solo Belén con los hurtos". Sin IA entiende las preguntas con un intérprete propio.
 
 ## La Agencia de datos (`/alpujarra`)
 
