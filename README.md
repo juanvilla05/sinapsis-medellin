@@ -17,7 +17,7 @@ En línea: **https://pulsomedellin.com** · Repositorio de entrega: [juanvilla05
 | [`resumen_pitch.pdf`](resumen_pitch.pdf) | Resumen de una página para la final ([texto](docs/resumen_pitch.md)) |
 | [`LICENSE`](LICENSE) | Código MIT; los datos conservan la licencia de su fuente |
 
-Equipo PULSO Medellín · Ingeniería en Ciencia de Datos, Institución Universitaria ITM · categoría Interna · modalidad Visualización · temática Innovación y tecnología.
+Equipo PULSO Medellín · Ingeniería en Ciencias de Datos, Institución Universitaria ITM · categoría Interna · modalidad Visualización · temática Innovación y tecnología.
 
 ## Hallazgo principal
 

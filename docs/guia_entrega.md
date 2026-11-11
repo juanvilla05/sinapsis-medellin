@@ -16,8 +16,8 @@ Hackathon de Datos ITM 2026 · Formulario de entrega · PULSO Medellín
 
 | Nombre completo | Universidad o IES | Programa | Semestre | Rol |
 |---|---|---|---|---|
-| Juan Camilo Villa | Institución Universitaria ITM | Ingeniería en Ciencia de Datos | 3 | Líder |
-| Isabela Zuluaga | Institución Universitaria ITM | Ingeniería en Ciencia de Datos | 3 | Integrante |
+| Juan Camilo Villa Zapata | Institución Universitaria ITM | Ingeniería en Ciencias de Datos | 3 | Líder |
+| Isabela Zuluaga Rodriguez | Institución Universitaria ITM | Ingeniería en Ciencias de Datos | 3 | Integrante |
 
 ## 2. Problema que resolvieron
 
@@ -86,5 +86,5 @@ Declaramos que el trabajo es original del equipo; que usamos datos reales de Med
 
 | Campo | Respuesta |
 |---|---|
-| **Nombre y firma del líder** | Juan Camilo Villa, en representación del equipo PULSO Medellín |
+| **Nombre y firma del líder** | Juan Camilo Villa Zapata, en representación del equipo PULSO Medellín |
 | **Fecha** | 10 de noviembre de 2026 |
