@@ -10,14 +10,14 @@ Hackathon de Datos ITM 2026 · Formulario de entrega · PULSO Medellín
 | **Nombre del proyecto** | PULSO Medellín · la ciudad en vivo, con datos abiertos |
 | **Categoría** | ☒ Interna    ☐ Externa |
 | **Modalidad** | ☐ Análisis de datos    ☐ Pipelines automáticos    ☒ Visualización |
-| **Temática** | POR COMPLETAR |
-| **Contacto del líder** | cfinancieramedellin@gmail.com · celular: POR COMPLETAR |
-| **Fecha y hora de entrega** | 10 de noviembre de 2026, POR COMPLETAR |
+| **Temática** | Innovación y tecnología |
+| **Contacto del líder** | cfinancieramedellin@gmail.com · 312 281 1759 |
+| **Fecha y hora de entrega** | 10 de noviembre de 2026, 9:08 p. m. |
 
 | Nombre completo | Universidad o IES | Programa | Semestre | Rol |
 |---|---|---|---|---|
-| Juan Camilo Villa | Institución Universitaria ITM | POR COMPLETAR | POR COMPLETAR | Líder |
-| Isabela Zuluaga | Institución Universitaria ITM | POR COMPLETAR | POR COMPLETAR | Integrante |
+| Juan Camilo Villa | Institución Universitaria ITM | Ingeniería en Ciencia de Datos | 3 | Líder |
+| Isabela Zuluaga | Institución Universitaria ITM | Ingeniería en Ciencia de Datos | 3 | Integrante |
 
 ## 2. Problema que resolvieron
 
@@ -31,8 +31,8 @@ Hackathon de Datos ITM 2026 · Formulario de entrega · PULSO Medellín
 
 | Campo | Respuesta |
 |---|---|
-| **Qué hace el artefacto** | Un mapa 3D de Medellín que reúne el aire en vivo de SIATA con la seguridad vial y el hurto de MEData en celdas de 250 m, más la Agencia de datos, que audita los 433 conjuntos del catálogo de MEData, limpia sus archivos en vivo y propone una mejora por conjunto. PulsoBot, un asistente con voz, responde citando fuente y fecha de corte. |
-| **Cómo lo usa el usuario** | Abre pulsomedellin.com y ve el mapa con las estaciones de aire de hoy. Activa una capa (incidentes viales, víctimas o hurto) y toca una columna, estación o comuna para ver su cifra. Pide una ruta y compara las alternativas por aire y siniestralidad. Le pregunta a PulsoBot, por texto o por voz. En «Agencia de datos» revisa qué conjuntos están atrasados, limpia un archivo y descarga las propuestas de mejora en CSV. |
+| **Qué hace el artefacto** | Un mapa 3D de Medellín que reúne el aire en vivo de SIATA con la seguridad vial y el hurto de MEData en celdas de 250 m o por comunas, más la Agencia de datos, que audita los 433 conjuntos del catálogo de MEData, limpia sus archivos en vivo y propone una mejora por conjunto. PulsoBot, un asistente con voz, responde citando fuente y fecha de corte. |
+| **Cómo lo usa el usuario** | Abre pulsomedellin.com y ve el mapa con las estaciones de aire de hoy. Activa una capa (incidentes viales, víctimas o hurto) y elige cómo verla: puntos calientes en columnas de 250 m, toda la ciudad por comunas o una sola comuna con su total, su serie por año y el aire de su estación. Pide una ruta y compara las alternativas por aire y siniestralidad. Le pregunta a PulsoBot, por texto o por voz, y él mueve el mapa (por ejemplo, «muéstrame solo Belén con los hurtos»). En «Agencia de datos» revisa qué conjuntos están atrasados, limpia un archivo y descarga las propuestas de mejora en CSV. |
 | **Valor: decisión o tarea que mejora** | Al ciudadano le permite elegir por dónde moverse sabiendo de cuándo es cada dato. Al equipo de MEData le permite priorizar en minutos qué conjuntos actualizar primero: 271 están en estado crítico (más de 3 veces su plazo) y cada uno tiene su propuesta, filtrable por secretaría. Auditar el catálogo a mano exige abrir 433 fichas una por una. |
 | **Hallazgo principal o contribución** | El 92,6 % de los conjuntos de MEData con periodicidad declarada está atrasado: 313 de 338; 271 en estado crítico y solo 25 al día (catálogo consultado el 10 de noviembre de 2026). Se ve en «Agencia de datos» (/alpujarra), bloque «Lo que encontró la Agencia», y conjunto por conjunto en /frescura. Consecuencia concreta: MEData deja de publicar muertes viales en septiembre de 2021, mientras la Policía Nacional reporta 563 en Medellín en 2023; se ve en /monitoreo, pestaña «Brecha», y preguntándole a PulsoBot. |
 | **Qué aporta frente a los datos originales** | El portal muestra la fecha de cada conjunto, pero no la compara con la periodicidad prometida ni da una vista de todo el catálogo. PULSO hace esa auditoría completa y repetible, entrega 428 propuestas de mejora, limpia archivos que descargados no se pueden usar tal cual (filas vacías, codificación rota, comunas escritas de varias formas) y cruza MEData con SIATA, la Policía y las comunas del Distrito en un mismo mapa, sin exponer registros individuales. |
@@ -65,9 +65,9 @@ Hackathon de Datos ITM 2026 · Formulario de entrega · PULSO Medellín
 | **Enlace a la versión en línea** | https://pulsomedellin.com · Agencia de datos: https://pulsomedellin.com/alpujarra |
 | **Qué necesita el jurado para probarlo** | En línea: solo un navegador con WebGL; sin cuenta ni claves. En el computador: Node.js 20 o superior y conexión a internet; tampoco necesita claves (sin ellas PulsoBot responde en modo directo y el planificador de rutas avisa que requiere clave). |
 | **Tiempo estimado de la prueba** | 5 minutos en línea; 10 minutos en ejecución local. |
-| **Prueba que debe hacer el jurado** | 1. Abrir https://pulsomedellin.com: mapa 3D con las estaciones de SIATA y la hora de la última lectura.<br>2. Panel «Capas» → «Incidentes viales» → tocar una columna.<br>3. Botón «PulsoBot» → preguntar «¿Cuántas muertes viales hubo en 2023 según MEData y la Policía?».<br>4. Menú «Agencia de datos» → bajar a «Lo que encontró la Agencia».<br>5. Abrir /ventanilla y descargar las propuestas en CSV. |
-| **Resultado que debe ver** | En la Agencia: «92,6 %» de conjuntos atrasados, 313 de 338, con 271 críticos y 25 al día. En PulsoBot: 563 muertes viales en 2023 según la Policía y MEData sin publicar ese año, con conjunto, campo, licencia y fecha de corte. En el mapa: columnas de 250 m con su cifra al tocarlas y el corte del 1 de septiembre de 2020. En la Ventanilla: 428 de 433 conjuntos con propuesta, 291 de prioridad alta. |
-| **Tecnologías y uso de IA** | Next.js 16, React 19, TypeScript y Tailwind; MapLibre GL y deck.gl para el mapa; three.js para la Agencia en 3D; Python 3 (biblioteca estándar) para los agregados con supresión de conteos menores a 5; Vercel para la publicación. Google Routes y Places solo calculan la geometría y los tiempos de las rutas; OpenFreeMap solo aporta la cartografía. Uso de IA, declarado también en instrucciones.txt: Claude (Anthropic) como asistente de programación y de diseño visual; Gemini 2.5 Flash, opcional, interpreta la pregunta en PulsoBot y elige una herramienta, pero no genera cifras: todas salen de funciones deterministas sobre las fuentes citadas; ElevenLabs, opcional, lee la respuesta en voz alta. |
+| **Prueba que debe hacer el jurado** | 1. Abrir https://pulsomedellin.com: mapa 3D con las estaciones de SIATA y la hora de la última lectura.<br>2. Panel «Capas» → «Incidentes viales» → tocar una columna.<br>3. Selector de vista → «Comunas» → tocar La Candelaria.<br>4. Botón «PulsoBot» → preguntar «¿Cuántas muertes viales hubo en 2023 según MEData y la Policía?».<br>5. Menú «Agencia de datos» → bajar a «Lo que encontró la Agencia».<br>6. Abrir /ventanilla y descargar las propuestas en CSV. |
+| **Resultado que debe ver** | En la Agencia: «92,6 %» de conjuntos atrasados, 313 de 338, con 271 críticos y 25 al día. En PulsoBot: 563 muertes viales en 2023 según la Policía y MEData sin publicar ese año, con conjunto, campo, licencia y fecha de corte. En el mapa: columnas de 250 m con su cifra al tocarlas y el corte del 1 de septiembre de 2020. Por comunas: La Candelaria con 52.147 incidentes viales, el 20,8 % del total por comunas (julio de 2014 a septiembre de 2020). En la Ventanilla: 428 de 433 conjuntos con propuesta, 291 de prioridad alta. |
+| **Tecnologías y uso de IA** | Next.js 16, React 19, TypeScript y Tailwind; MapLibre GL y deck.gl para el mapa; three.js para Medellín 3D en la Sala de Monitoreo; Python 3 (biblioteca estándar) para los agregados con supresión de conteos menores a 5; Vercel para la publicación. Google Routes y Places solo calculan la geometría y los tiempos de las rutas; OpenFreeMap solo aporta la cartografía. Uso de IA, declarado también en instrucciones.txt: Claude (Anthropic) como asistente de programación y de diseño visual; Gemini 2.5 Flash, opcional, interpreta la pregunta en PulsoBot y elige una herramienta, pero no genera cifras: todas salen de funciones deterministas sobre las fuentes citadas; ElevenLabs, opcional, lee la respuesta en voz alta. |
 
 ## 6. Lista de verificación antes de entregar
 

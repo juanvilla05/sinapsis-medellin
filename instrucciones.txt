@@ -14,8 +14,14 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    Abrir https://pulsomedellin.com
    Agencia de datos (calidad de los datos): https://pulsomedellin.com/alpujarra
 
-3. EJECUTARLO EN EL COMPUTADOR
-   Requisitos: Node.js 20 o superior (probado con Node 24), navegador con WebGL y conexión a internet.
+3. ENTORNO
+   Lenguaje: TypeScript sobre Node.js 20 o superior (probado con Node 24.4). Navegador con WebGL.
+   Dependencias con versión exacta en package.json y package-lock.json (npm install las instala):
+   Next.js 16.4.5, React 19.3.0, MapLibre GL 5.24, deck.gl 9.3, three.js 0.160, AI SDK 6, zod 4.
+   Scripts de datos (opcionales): Python 3, solo biblioteca estándar, sin requirements.txt.
+
+4. EJECUTARLO EN EL COMPUTADOR
+   Requisitos: los del punto 3 y conexión a internet.
    No necesita ninguna clave: el mapa y los datos funcionan sin claves; sin clave de IA PulsoBot
    responde en "modo directo" con las mismas herramientas.
    git clone https://github.com/juanvilla05/sinapsis-medellin.git
@@ -32,12 +38,16 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
      python3 scripts-dev/agregados.py      CSV de MEData (~240 MB) -> src/lib/monitoreo/datos/*.json
      python3 scripts-dev/fixtures.py       copias de respaldo de las fuentes vivas
 
-4. QUÉ DEBE VER EL JURADO
-   a) Portada (/): mapa 3D nocturno de Medellín con los faros de las estaciones SIATA coloreados por
+5. QUÉ DEBE VER EL JURADO
+   a) Portada (/): mapa 3D de Medellín con los faros de las estaciones SIATA coloreados por
       categoría del índice (Resolución 2254 de 2017) y la hora de la última lectura de hoy; arriba,
       estaciones válidas en Medellín, PM2.5 promedio y la estación con el valor más alto.
    b) Panel "Capas" > "Incidentes viales": columnas de 250 m que crecen sobre la ciudad (MEData,
       corte 1 de septiembre de 2020). Clic en una columna, estación o comuna = tarjeta con la cifra.
+      Selector de vista (debajo del aire): "Puntos" (columnas), "Comunas" (toda la ciudad por comunas,
+      sin columnas) o "Una comuna". En "Comunas", tocar La Candelaria: 52.147 incidentes viales, 20,8 %
+      del total por comunas, con su serie por año y el aire de su estación de SIATA.
+      A PulsoBot también se le puede pedir: "muéstrame solo Belén con los hurtos".
    c) Botón "PulsoBot" > "¿Cómo está el aire en Medellín ahora?" (o "Conversar por voz" y decirlo): respuesta con fuente y
       hora de lectura; el mapa vuela a la estación con el PM2.5 más alto y abre su tarjeta.
       "¿Cuántas muertes viales hubo en 2023 según MEData y la Policía?": 563 según la Policía,
@@ -61,7 +71,7 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
       tablero, documentar columnas o ampliar la descripción. Filtro por secretaría y descarga en CSV.
    Si una fuente no responde, la aplicación lo dice y muestra la copia guardada con su fecha.
 
-5. DATOS Y FUENTES (sin datos personales: solo agregados; conteos de 1 a 4 suprimidos)
+6. DATOS Y FUENTES (sin datos personales: solo agregados; conteos de 1 a 4 suprimidos)
    src/data/catalogo.json, resumen-catalogo.json · MEData, catálogo de conjuntos (433) ·
      https://medata.app.medellin.gov.co/api/1/metastore/schemas/dataset/items · términos del portal MEData
    src/lib/monitoreo/datos/*incidentes* · MEData 1-023-25-000094 Incidentes viales ·
@@ -87,7 +97,7 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    Mapa base: OpenFreeMap (© OpenStreetMap), solo cartografía; ninguna cifra sale de él.
    Detalle de cada agregado y de la supresión: src/lib/monitoreo/datos/README.md
 
-6. USO DE IA
+7. USO DE IA
    - Claude (Anthropic): asistente de programación para escribir y depurar código, y Claude Design para
      el diseño visual de la Agencia de datos. El equipo revisó y puede explicar cada componente.
    - ElevenLabs, opcional y solo con clave: lee en voz alta la respuesta de PulsoBot (texto a voz).
@@ -95,6 +105,6 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
      elige una herramienta. No genera cifras: todas salen de funciones deterministas sobre las fuentes
      de la sección 5. Sin clave, las mismas herramientas responden en modo directo.
 
-7. CONTACTO
+8. CONTACTO
    Juan Camilo Villa (líder) · cfinancieramedellin@gmail.com
    Isabela Zuluaga
