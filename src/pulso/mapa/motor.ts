@@ -7,7 +7,7 @@ import maplibregl, { type Map as MapaML, type StyleSpecification } from "maplibr
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ColumnLayer, GeoJsonLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
-import type { LayersList, PickingInfo } from "@deck.gl/core";
+import { WebMercatorViewport, type LayersList, type PickingInfo } from "@deck.gl/core";
 import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso, VistaPulso } from "../tipos";
 import { estiloPulso, URL_ESTILO_BASE } from "./estilo";
 import {
@@ -27,6 +27,18 @@ import {
   type RejillaMapa,
   type RutasMapa,
 } from "./datos";
+
+const FUENTE_NOMBRES = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+let medidorTexto: CanvasRenderingContext2D | null = null;
+/** ancho en píxeles de un nombre, medido con la misma fuente del TextLayer */
+function anchoTexto(texto: string, px: number) {
+  medidorTexto ??= document.createElement("canvas").getContext("2d");
+  if (!medidorTexto) return texto.length * px * 0.6;
+  medidorTexto.font = `700 ${px}px ${FUENTE_NOMBRES}`;
+  return medidorTexto.measureText(texto).width;
+}
+/** la comuna elegida siempre gana; después las urbanas sobre los corregimientos */
+const prioridadBase = (c: ComunaMapa, resaltada: string | null | undefined) => (c.codigo === resaltada ? 1000 : c.corregimiento ? 0 : 100);
 
 export const CENTRO = { lng: -75.5736, lat: 6.2442 };
 const VISTA = { zoom: 11.6, pitch: 55, bearing: -20 };
@@ -376,7 +388,48 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     return dentro;
   }
 
+  /**
+   * Nombres de comunas sin encimarse: cada nombre se proyecta con la misma cámara que usa deck.gl, se ordenan
+   * por prioridad y se descarta el que choque con uno ya puesto. Son 21 nombres: se recalcula en cada cuadro.
+   */
+  let nombresEnPantalla = false;
+  function sinEncimarse(
+    comunas: ComunaMapa[],
+    pos: (c: ComunaMapa) => [number, number, number],
+    tam: (c: ComunaMapa) => number,
+    prioridad: (c: ComunaMapa) => number,
+  ): ComunaMapa[] {
+    nombresEnPantalla = comunas.length > 1;
+    if (comunas.length < 2) return comunas;
+    const caja = map.getContainer();
+    const centro = map.getCenter();
+    const vp = new WebMercatorViewport({
+      width: caja.clientWidth,
+      height: caja.clientHeight,
+      longitude: centro.lng,
+      latitude: centro.lat,
+      zoom: map.getZoom(),
+      pitch: map.getPitch(),
+      bearing: map.getBearing(),
+      padding: map.getPadding(),
+    });
+    const puestas: [number, number, number, number][] = [];
+    const visibles: ComunaMapa[] = [];
+    for (const c of [...comunas].sort((a, b) => prioridad(b) - prioridad(a))) {
+      const [x, y] = vp.project(pos(c));
+      const px = tam(c);
+      const mx = anchoTexto(c.etiqueta, px) / 2 + 6;
+      const my = px * 0.6 + 2;
+      const r: [number, number, number, number] = [x - mx, y - my, x + mx, y + my];
+      if (puestas.some((o) => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) continue;
+      puestas.push(r);
+      visibles.push(c);
+    }
+    return visibles;
+  }
+
   function capasDeck(ahora: number): LayersList {
+    nombresEnPantalla = false;
     const capas: LayersList = [];
     // al acercarse, las columnas se achican para no tapar la ciudad (altura en pantalla más estable)
     const fz = Math.min(1, Math.pow(2, (12 - map.getZoom()) * 0.8));
@@ -393,6 +446,8 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       const tDe = (codigo: string) => valores?.get(codigo)?.t ?? null;
       const alfaDe = (codigo: string) => (st.comunaResaltada && codigo !== st.comunaResaltada ? 80 : 225);
       const clave = [st.comunaResaltada, tema, valores];
+      const posNombre = (c: ComunaMapa): [number, number, number] => [c.centro[0], c.centro[1], (tDe(c.codigo) ?? 0) * escala + 40];
+      const tamNombre = (c: ComunaMapa) => (c.codigo === st.comunaResaltada ? 15 : 12);
       capas.push(
         new GeoJsonLayer<FeatureComuna["properties"]>({
           id: "comunas",
@@ -416,12 +471,12 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
         }),
         new TextLayer<ComunaMapa>({
           id: "comunas-nombres",
-          data: st.comunas,
-          getPosition: (c) => [c.centro[0], c.centro[1], (tDe(c.codigo) ?? 0) * escala + 40],
+          data: sinEncimarse(st.comunas, posNombre, tamNombre, (c) => prioridadBase(c, st.comunaResaltada) + Math.round((tDe(c.codigo) ?? 0) * 800)),
+          getPosition: posNombre,
           getText: (c) => c.etiqueta,
-          getSize: (c) => (c.codigo === st.comunaResaltada ? 15 : 12),
+          getSize: tamNombre,
           getColor: (c) => (c.codigo === st.comunaResaltada ? P.textoComunaSel : P.textoComuna),
-          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontFamily: FUENTE_NOMBRES,
           fontWeight: 700,
           characterSet: "auto",
           fontSettings: { sdf: true },
@@ -453,12 +508,14 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
         }),
         new TextLayer<ComunaMapa>({
           id: "comunas-nombres",
-          data: st.comunaResaltada ? st.comunas.filter((c) => c.codigo === st.comunaResaltada) : st.comunas,
+          data: st.comunaResaltada
+            ? st.comunas.filter((c) => c.codigo === st.comunaResaltada)
+            : sinEncimarse(st.comunas, (c) => [c.centro[0], c.centro[1], 0], () => 12, (c) => prioridadBase(c, st.comunaResaltada)),
           getPosition: (c) => c.centro,
           getText: (c) => c.etiqueta,
           getSize: st.comunaResaltada ? 16 : 12,
           getColor: st.comunaResaltada ? P.textoComunaSel : P.textoComuna,
-          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontFamily: FUENTE_NOMBRES,
           fontWeight: 700,
           characterSet: "auto",
           fontSettings: { sdf: true },
@@ -505,15 +562,18 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
         }),
       );
       if (zoomAlto || st.comunaResaltada) {
+        const tamZoom = (c: ComunaMapa) => (c.codigo === st.comunaResaltada ? 15 : 12.5);
         capas.push(
           new TextLayer<ComunaMapa>({
             id: "comunas-nombres",
-            data: zoomAlto ? st.comunas : st.comunas.filter((c) => c.codigo === st.comunaResaltada),
+            data: zoomAlto
+              ? sinEncimarse(st.comunas, (c) => [c.centro[0], c.centro[1], 0], tamZoom, (c) => prioridadBase(c, st.comunaResaltada))
+              : st.comunas.filter((c) => c.codigo === st.comunaResaltada),
             getPosition: (c) => c.centro,
             getText: (c) => c.etiqueta,
-            getSize: (c) => (c.codigo === st.comunaResaltada ? 15 : 12.5),
+            getSize: tamZoom,
             getColor: (c) => (c.codigo === st.comunaResaltada ? P.textoComunaSel : P.textoComuna),
-            fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+            fontFamily: FUENTE_NOMBRES,
             fontWeight: 700,
             characterSet: "auto",
             fontSettings: { sdf: true },
@@ -746,7 +806,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           getSize: 13,
           getColor: P.etiquetaTexto,
           getPixelOffset: [0, -22],
-          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontFamily: FUENTE_NOMBRES,
           fontWeight: 700,
           characterSet: "auto",
           background: true,
@@ -798,6 +858,10 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
   map.on("zoom", () => {
     zoomAlto = map.getZoom() >= 12.4;
     pedirCuadro();
+  });
+  // al girar o arrastrar, los nombres de comunas se reacomodan para no encimarse
+  map.on("move", () => {
+    if (nombresEnPantalla) pedirCuadro();
   });
 
   /* ───────── cámara ───────── */
