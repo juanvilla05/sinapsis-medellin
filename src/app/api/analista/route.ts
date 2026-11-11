@@ -11,7 +11,8 @@ import { cabecerasLimite, ipCliente, limitar } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
-const LIMITE_CHAT_POR_HORA = 20;
+// Alto a propósito: en la evaluación varias personas pueden compartir la misma IP (wifi de la universidad).
+const LIMITE_CHAT_POR_HORA = 150;
 const MAX_MENSAJES = 30;
 const MAX_TEXTO = 2000;
 
