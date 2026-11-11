@@ -25,7 +25,7 @@ La oficina detrás del mapa: una **vista isométrica 2D** (SVG, sin WebGL) que s
 
 - Arriba, cuatro cifras reales: % de conjuntos atrasados, conjuntos auditados, conjuntos críticos y estaciones de SIATA reportando.
 - Funciona en celular, tablet y computador; con teclado, cada sala es un botón (Tab + Enter).
-- Panel ejecutivo sin animación: `/panel`, `/frescura`, `/laboratorio`, `/ventanilla`.
+- Cada despacho tiene además su página directa: `/frescura`, `/laboratorio`, `/ventanilla`, `/monitoreo`.
 
 ## Despachos
 

@@ -164,18 +164,12 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
   const trabajando = AREAS_MUNDO.filter((a) => agentes[a.id as IdAgente].estado === "trabajando").length;
   const teNecesitan = AREAS_MUNDO.filter((a) => agentes[a.id as IdAgente].estado === "te-necesita").length;
 
-  const siata =
-    aire === undefined
-      ? { valor: "…", texto: "Consultando las estaciones de SIATA" }
-      : aire === null
-        ? { valor: "sin dato", texto: "SIATA no respondió en este momento" }
-        : { valor: miles(aire.validas), texto: aire.guardado ? "estaciones de SIATA (copia guardada)" : "estaciones de SIATA reportando en Medellín" };
-
-  const kpis = [
-    { valor: `${decimal(resumen.pctAtrasados)} %`, texto: `de los conjuntos con periodicidad declarada está atrasado (${miles(atrasados)} de ${miles(resumen.evaluables)})`, color: "#DC2626" },
-    { valor: miles(resumen.totalConjuntos), texto: "conjuntos del catálogo de MEData auditados", color: "#0F172A" },
-    { valor: miles(resumen.porEstado.critico), texto: "en estado crítico: más de 3 veces su plazo sin actualizar", color: "#B45309" },
-    { valor: siata.valor, texto: siata.texto, color: "#047857" },
+  // Diagnóstico: el hallazgo principal y cuatro cifras que lo explican (antes repartidas entre el panel y la Agencia)
+  const diagnostico = [
+    { valor: miles(resumen.porEstado.critico), texto: "en estado crítico: más de 3 veces su plazo sin actualizarse", color: "#B91C1C" },
+    { valor: miles(resumen.porEstado["al-dia"]), texto: "al día con la periodicidad que prometieron", color: "#15803D" },
+    { valor: miles(resumen.fechasIrregulares), texto: "publican la fecha en un formato no estándar", color: "#B45309" },
+    { valor: miles(resumen.soloTablero), texto: "solo muestran un tablero, sin datos para descargar", color: "#6D28D9" },
   ];
 
   return (
@@ -237,9 +231,6 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
         </div>
 
         <div className="mt-auto flex flex-col gap-2 border-t border-white/10 px-1 pt-4">
-          <Link href="/panel" className="flex items-center gap-2 rounded-lg px-1 py-1 text-[12.5px] font-semibold text-white/70 hover:text-white">
-            <Icono n="panel" className="h-4 w-4" /> Panel ejecutivo
-          </Link>
           <p className="text-[10.5px] leading-snug text-white/40">
             {MARCA.nombre} · {MARCA.evento}
           </p>
@@ -270,19 +261,6 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
               <img src="/marca/logo-alcaldia.png" alt="Alcaldía de Medellín" className="h-10 w-[140px] object-contain" />
             </div>
           </section>
-
-          {/* cifras reales */}
-          <section aria-label="Cifras del catálogo" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {kpis.map((k) => (
-              <div key={k.texto} className="flex flex-col gap-1 rounded-2xl border border-[#E3EAF3] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,.04)]">
-                <span className="font-mono text-[24px] font-semibold leading-none tracking-[-0.02em] sm:text-[28px]" style={{ color: k.color }}>
-                  {k.valor}
-                </span>
-                <span className="text-[12.5px] leading-snug text-[#475569]">{k.texto}</span>
-              </div>
-            ))}
-          </section>
-          <p className="-mt-2 font-mono text-[11px] text-[#64748B]">Fuente: catálogo de MEData, Alcaldía de Medellín, consultado el {fechaColombia(resumen.generado)} · SIATA en vivo.</p>
 
           {/* oficina */}
           <section aria-label="Oficina de la Agencia" className="overflow-hidden rounded-3xl border border-[#E3EAF3] bg-white shadow-[0_1px_2px_rgba(15,23,42,.04),0_24px_48px_-32px_rgba(30,58,95,.35)]">
@@ -342,6 +320,45 @@ export default function AgenciaDatos({ resumen, opcionesLab, datos }: { resumen:
             </div>
             <p className="border-t border-[#EEF2F7] px-4 py-2.5 text-center text-[12px] text-[#64748B] sm:px-5">
               {vista === "2d" ? "Toca un despacho para abrir su herramienta." : "Gira la maqueta y toca un despacho para abrir su herramienta."} La salida azul lleva a PULSO, la ciudad en vivo.
+            </p>
+          </section>
+
+          {/* diagnóstico: una sola lectura del catálogo, después de ver la oficina */}
+          <section aria-labelledby="titulo-diagnostico" className="grid gap-5 rounded-3xl border border-[#E3EAF3] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.04)] sm:p-7 lg:grid-cols-[1.15fr_1fr] lg:gap-8">
+            <div className="flex flex-col">
+              <h2 id="titulo-diagnostico" className="text-[13px] font-bold tracking-[0.1em] text-[#2563EB]">
+                LO QUE ENCONTRÓ LA AGENCIA
+              </h2>
+              <p className="mt-2 font-mono text-[52px] font-semibold leading-none tracking-[-0.03em] text-[#DC2626] sm:text-[64px]">{decimal(resumen.pctAtrasados)} %</p>
+              <p className="mt-3 max-w-[460px] text-[16px] leading-relaxed text-[#0F172A] sm:text-[17px]">
+                de los conjuntos de MEData que prometen actualizarse cada cierto tiempo está atrasado:{" "}
+                <strong>
+                  {miles(atrasados)} de {miles(resumen.evaluables)}
+                </strong>
+                .
+              </p>
+              <button
+                onClick={() => abrir("reloj")}
+                className="mt-5 inline-flex items-center gap-2 self-start rounded-full bg-[#2563EB] px-5 py-2.5 text-[14.5px] font-bold text-white transition-colors hover:bg-[#1D4ED8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
+              >
+                Ver cuáles son <Icono n="flecha" className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="grid grid-cols-2 gap-3 self-center">
+              {diagnostico.map((k) => (
+                <div key={k.texto} className="rounded-2xl border border-[#EEF2F7] bg-[#F8FAFD] p-4">
+                  <dt className="sr-only">{k.texto}</dt>
+                  <dd>
+                    <span className="block font-mono text-[28px] font-semibold leading-none tracking-[-0.02em]" style={{ color: k.color }}>
+                      {k.valor}
+                    </span>
+                    <span className="mt-1.5 block text-[13.5px] leading-snug text-[#475569]">{k.texto}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-[13px] text-[#64748B] lg:col-span-2">
+              Catálogo de MEData ({miles(resumen.totalConjuntos)} conjuntos), consultado el {fechaColombia(resumen.generado)}.
             </p>
           </section>
 

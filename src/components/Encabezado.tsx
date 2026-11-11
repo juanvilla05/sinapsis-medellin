@@ -24,9 +24,6 @@ export default function Encabezado() {
           <Link href="/alpujarra" className="rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white">
             Agencia
           </Link>
-          <Link href="/panel" className="rounded-full px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/10 hover:text-white">
-            Panel
-          </Link>
           {DESPACHOS.filter((d) => d.listo).map((d) => (
             <Link
               key={d.id}
@@ -49,9 +46,6 @@ export default function Encabezado() {
           </Link>
           <Link href="/alpujarra" className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">
             Agencia
-          </Link>
-          <Link href="/panel" className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">
-            Panel
           </Link>
           {DESPACHOS.filter((d) => d.listo).map((d) => (
             <Link key={d.id} href={d.ruta} className="shrink-0 rounded-full px-3 py-1.5 text-[13px] text-white/75 hover:bg-white/10">

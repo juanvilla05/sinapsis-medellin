@@ -27,11 +27,10 @@ const limpiar = (t: string) =>
 const MODALIDADES = ["Atraco", "Descuido", "Cosquilleo", "Raponazo", "Engaño", "Escopolamina", "Halado", "Rompimiento"];
 const SECRETARIAS = ["Movilidad", "Salud", "Educación", "Seguridad", "Planeación", "Hacienda", "Cultura", "Inclusión Social", "Desarrollo Económico", "Medio Ambiente", "Infraestructura", "Gobierno"];
 const SECCIONES: [RegExp, string][] = [
-  [/\b(alpujarra|calidad de (los )?datos|agencia|oficina)\b/, "alpujarra"],
+  [/\b(alpujarra|calidad de (los )?datos|agencia|oficina|panel|tablero)\b/, "alpujarra"],
   [/\b(laboratorio|limpieza)\b/, "laboratorio"],
   [/\b(frescura|reloj)\b/, "frescura"],
   [/\b(monitoreo|sala)\b/, "monitoreo"],
-  [/\b(panel|tablero)\b/, "panel"],
   [/\b(inicio|portada|mapa principal)\b/, "inicio"],
 ];
 const CAPAS: [RegExp, string][] = [
