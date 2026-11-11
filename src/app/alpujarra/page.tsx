@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AgenciaDatos from "@/agencia/AgenciaDatos";
+import type { FilaReloj } from "@/agencia/Despachos";
 import { construirDatosMundo } from "@/mundo/datos";
 import catalogo from "@/data/catalogo.json";
 import resumen from "@/data/resumen-catalogo.json";
@@ -21,5 +22,16 @@ export default async function Agencia() {
   const seguridad = await cargarSeguridadVial();
   const propuestas = construirPropuestas(catalogo as ConjuntoAuditado[]).length;
   const datos = construirDatosMundo(resumen as ResumenCatalogo, { seguridad, propuestas });
-  return <AgenciaDatos resumen={resumen as ResumenCatalogo} opcionesLab={opcionesLab} datos={datos} visuales={construirVisuales(catalogo as ConjuntoAuditado[])} />;
+  // conjuntos con su atraso para el Reloj (ranking) y la Ventanilla (días sin actualizar)
+  const frescura: FilaReloj[] = (catalogo as ConjuntoAuditado[]).map((c) => ({
+    id: c.id,
+    titulo: c.titulo,
+    publicador: c.publicador,
+    periodicidad: c.periodicidad,
+    modificado: c.modificado,
+    dias: c.diasSinActualizar,
+    veces: c.vecesAtraso,
+    estado: c.estado,
+  }));
+  return <AgenciaDatos resumen={resumen as ResumenCatalogo} opcionesLab={opcionesLab} datos={datos} visuales={construirVisuales(catalogo as ConjuntoAuditado[])} frescura={frescura} />;
 }
