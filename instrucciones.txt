@@ -106,5 +106,5 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
      de la sección 5. Sin clave, las mismas herramientas responden en modo directo.
 
 8. CONTACTO
-   Juan Camilo Villa (líder) · cfinancieramedellin@gmail.com
-   Isabela Zuluaga
+   Juan Camilo Villa Zapata (líder) · cfinancieramedellin@gmail.com
+   Isabela Zuluaga Rodriguez
