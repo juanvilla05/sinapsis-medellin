@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
 import type { DatosMundo } from "@/mundo/datos";
 import type { IdArea } from "@/mundo/areas";
 import { COLOR_GLOBO, type EstadoVisibleAgente, type IdAgente } from "@/mundo/agentes";
@@ -38,6 +38,7 @@ export const SALAS: Sala[] = [
   { id: "monitoreo", num: "05", nombre: "Sala de Monitoreo", x: 20.75, y: 0, w: 7.25, d: 7.2, tinte: "#EAF8F1", borde: "#A7E3C7", acento: "#059669" },
   { id: "ventanilla", num: "03", nombre: "Ventanilla de Apertura", x: 0, y: 8.6, w: 7, d: 5.4, tinte: "#F3F0FE", borde: "#CABDFA", acento: "#7C3AED" },
   { id: "analista", num: "04", nombre: "Analista · PulsoBot", x: 0, y: 14.6, w: 7, d: 5.4, tinte: "#EDF4FF", borde: "#B9D3FB", acento: AZUL },
+  { id: "comunicaciones", num: "06", nombre: "Comunicaciones", x: 8.4, y: 17.2, w: 9.4, d: 2.8, tinte: "#FFF4ED", borde: "#FDC9A9", acento: "#C2410C" },
 ];
 
 const salaDe = (id: IdArea) => SALAS.find((s) => s.id === id)!;
@@ -99,13 +100,55 @@ function Planta({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   );
 }
 
+/**
+ * Rutina de cada agente en la vista 2D: se levanta del puesto, pasa por un punto intermedio, se queda frente a su
+ * tablero o pantalla y vuelve. Animada con CSS (agente-ronda en globals.css).
+ */
+const RUTAS_2D: Record<string, { base: [number, number]; lado: [number, number]; tablero: [number, number]; sentado: boolean; dur: number; retraso: number }> = {
+  reloj: { base: [9.2, 2.95], lado: [10.7, 2.95], tablero: [11.4, 1.05], sentado: true, dur: 24, retraso: 0 },
+  lab: { base: [16.7, 1.75], lado: [18.5, 1.75], tablero: [19.75, 1.05], sentado: false, dur: 20, retraso: -6 },
+  monitoreo: { base: [24.35, 3.45], lado: [26.0, 3.4], tablero: [25.3, 1.05], sentado: true, dur: 26, retraso: -11 },
+  ventanilla: { base: [2.9, 11.2], lado: [2.0, 10.8], tablero: [1.05, 10.4], sentado: false, dur: 22, retraso: -3 },
+  analista: { base: [3.65, 16.5], lado: [2.1, 16.4], tablero: [1.15, 17.3], sentado: true, dur: 25, retraso: -15 },
+  comunicaciones: { base: [12.2, 18.2], lado: [14.0, 18.25], tablero: [15.6, 18.45], sentado: true, dur: 23, retraso: -9 },
+  guia: { base: [13.5, 12.55], lado: [12.4, 12.4], tablero: [14.7, 12.4], sentado: false, dur: 16, retraso: -5 },
+};
+
+function Ronda({ id, children }: { id: string; children: ReactNode }) {
+  const r = RUTAS_2D[id];
+  if (!r) return <>{children}</>;
+  const [bx, by] = p(r.base[0], r.base[1]);
+  const delta = (q: [number, number]) => {
+    const [x, y] = p(q[0], q[1]);
+    return [r1(x - bx), r1(y - by)];
+  };
+  const [x1, y1] = delta(r.lado);
+  const [x2, y2] = delta(r.tablero);
+  const estilo = {
+    "--x1": `${x1}px`,
+    "--y1": `${y1}px`,
+    "--x2": `${x2}px`,
+    "--y2": `${y2}px`,
+    "--sit": r.sentado ? "5px" : "0px",
+    animationDuration: `${r.dur}s`,
+    animationDelay: `${r.retraso}s`,
+  } as CSSProperties;
+  return (
+    <g className="agente-ronda" style={estilo}>
+      {children}
+    </g>
+  );
+}
+
 function Agente({ id, x, y, saluda = false }: { id: keyof typeof LOOKS; x: number; y: number; saluda?: boolean }) {
   const [sx, sy] = p(x, y);
   return (
     <g transform={`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`}>
-      <g className="agente-respira">
-        <Persona look={LOOKS[id]} saluda={saluda} />
-      </g>
+      <Ronda id={id}>
+        <g className="agente-respira">
+          <Persona look={LOOKS[id]} saluda={saluda} />
+        </g>
+      </Ronda>
     </g>
   );
 }
@@ -212,6 +255,96 @@ function Mampara({ desde, hasta, fijo, eje }: { desde: number; hasta: number; fi
     <g pointerEvents="none">
       <polygon points={pts(puntos)} fill="#E0F2FE" opacity={0.35} stroke="#BAE6FD" strokeWidth={0.8} />
       <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#94A3B8" strokeWidth={2.2} strokeLinecap="round" />
+    </g>
+  );
+}
+
+/* ───────── Medellín en la Salida a PULSO (ilustración de referencia, sin cifras) ───────── */
+
+function Ventanas({ x, y, w, d, h, paso = 0.35 }: { x: number; y: number; w: number; d: number; h: number; paso?: number }) {
+  const v: ReactNode[] = [];
+  let k = 0;
+  for (let z = 0.3; z < h - 0.15; z += 0.42) {
+    for (let u = 0.2; u < w - 0.1; u += paso) {
+      const [wx, wy] = p(x + u, y + d, z);
+      v.push(<rect key={`i${k++}`} x={wx - 1.5} y={wy - 2.5} width={3} height={3} fill="#FDE68A" opacity={(k * 7) % 5 ? 0.85 : 0.22} />);
+    }
+    for (let u = 0.2; u < d - 0.1; u += paso) {
+      const [wx, wy] = p(x + w, y + u, z);
+      v.push(<rect key={`d${k++}`} x={wx - 1.5} y={wy - 2.5} width={3} height={3} fill="#FDE68A" opacity={(k * 3) % 4 ? 0.7 : 0.2} />);
+    }
+  }
+  return <g>{v}</g>;
+}
+
+function Edificio({ x, y, w = 0.85, d = 0.85, h }: { x: number; y: number; w?: number; d?: number; h: number }) {
+  return (
+    <g>
+      <Bloque x={x} y={y} w={w} d={d} h={h} tapa="#3B6296" izq="#1E3A5F" der="#14294A" linea="#0B122066" />
+      <Ventanas x={x} y={y} w={w} d={d} h={h} />
+    </g>
+  );
+}
+
+function Lugar({ x, y, z, texto }: { x: number; y: number; z: number; texto: string }) {
+  const [lx, ly] = p(x, y, z);
+  const ancho = texto.length * 5.6 + 12;
+  return (
+    <g pointerEvents="none">
+      <rect x={lx - ancho / 2} y={ly - 14} width={ancho} height={15} rx={4} fill="#0B1220" opacity={0.85} />
+      <text x={lx} y={ly - 3.5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#E0F2FE">
+        {texto}
+      </text>
+    </g>
+  );
+}
+
+function Medellin() {
+  const apice = p(26.7, 12.9, 5.3);
+  const [mx, my] = p(23.4, 16.6, 0.05);
+  return (
+    <g>
+      {/* río Medellín y plaza de La Alpujarra */}
+      <polygon points={rect(19.8, 12.3, 0.55, 7.7, 0.01)} fill="#1D4ED8" opacity={0.85} />
+      <polygon points={rect(21.0, 15.75, 3.3, 1.7, 0.02)} fill="#94A3B8" opacity={0.9} />
+      <Edificio x={21.0} y={12.6} h={1.3} />
+      <Edificio x={23.5} y={12.5} h={1.6} />
+      {/* Gobernación de Antioquia: torre ancha con aletas verticales */}
+      <Bloque x={21.0} y={14.4} w={2.5} d={1.1} h={2.7} tapa="#E2E8F0" izq="#CBD5E1" der="#94A3B8" linea="#0B122044" />
+      <Ventanas x={21.0} y={14.4} w={2.5} d={1.1} h={2.7} paso={0.3} />
+      {Array.from({ length: 9 }, (_, k) => {
+        const [ax, ay] = p(21.0 + k * 0.3, 15.5, 0);
+        const [bx, by] = p(21.0 + k * 0.3, 15.5, 2.7);
+        return <line key={k} x1={ax} y1={ay} x2={bx} y2={by} stroke="#F8FAFC" strokeWidth={1.2} opacity={0.9} />;
+      })}
+      <Edificio x={24.8} y={13.4} h={2.3} />
+      {/* Edificio Coltejer: torre esbelta con remate en forma de aguja */}
+      <Bloque x={26.2} y={12.4} w={1.0} d={1.0} h={4.0} tapa="#F1F5F9" izq="#E2E8F0" der="#94A3B8" linea="#0B122044" />
+      <Ventanas x={26.2} y={12.4} w={1.0} d={1.0} h={4.0} paso={0.3} />
+      <polygon points={`${pts([[26.2, 13.4, 4.0], [27.2, 13.4, 4.0]])} ${apice[0]},${apice[1]}`} fill="#E2E8F0" stroke="#94A3B8" strokeWidth={0.7} />
+      <polygon points={`${pts([[27.2, 12.4, 4.0], [27.2, 13.4, 4.0]])} ${apice[0]},${apice[1]}`} fill="#94A3B8" stroke="#64748B" strokeWidth={0.7} />
+      <line x1={p(26.7, 13.4, 4.25)[0]} y1={p(26.7, 13.4, 4.25)[1]} x2={p(26.7, 13.15, 4.8)[0]} y2={p(26.7, 13.15, 4.8)[1]} stroke="#FDE68A" strokeWidth={2.4} strokeLinecap="round" />
+      <line x1={apice[0]} y1={apice[1]} x2={apice[0]} y2={apice[1] - 15} stroke="#94A3B8" strokeWidth={1.4} />
+      <Edificio x={26.9} y={14.9} h={1.5} />
+      <Edificio x={25.6} y={16.2} h={0.9} />
+      {/* Monumento a la Raza, en la plaza de La Alpujarra */}
+      <Bloque x={23.2} y={16.4} z={0.02} w={0.4} d={0.4} h={0.12} tapa="#94A3B8" izq="#64748B" der="#475569" />
+      <path d={`M${mx},${my - 3} C${mx + 3},${my - 18} ${mx - 5},${my - 32} ${mx + 1},${my - 46} S${mx + 13},${my - 60} ${mx + 9},${my - 64}`} fill="none" stroke="#B7793E" strokeWidth={4.5} strokeLinecap="round" />
+      {/* Alcaldía de Medellín: bloque bajo y ancho con franjas horizontales */}
+      <Bloque x={21.0} y={17.6} w={2.9} d={1.5} h={1.5} tapa="#E2E8F0" izq="#CBD5E1" der="#94A3B8" linea="#0B122044" />
+      <Ventanas x={21.0} y={17.6} w={2.9} d={1.5} h={1.5} paso={0.3} />
+      {[0.45, 0.9, 1.35].map((z) => {
+        const [ax, ay] = p(21.0, 19.1, z);
+        const [bx, by] = p(23.9, 19.1, z);
+        return <line key={z} x1={ax} y1={ay} x2={bx} y2={by} stroke="#F8FAFC" strokeWidth={1.6} />;
+      })}
+      <Edificio x={26.9} y={18.6} h={0.7} />
+      <Edificio x={25.4} y={18.9} h={0.5} />
+      <Lugar x={26.7} y={12.9} z={6.1} texto="Edificio Coltejer" />
+      <Lugar x={22.25} y={14.95} z={3.3} texto="Gobernación de Antioquia" />
+      <Lugar x={23.6} y={16.6} z={2.7} texto="La Alpujarra" />
+      <Lugar x={22.45} y={18.7} z={1.85} texto="Alcaldía de Medellín" />
+      <Lugar x={20.1} y={18.9} z={0.2} texto="Río Medellín" />
     </g>
   );
 }
@@ -522,24 +655,29 @@ export default function OficinaIso({
         <Bloque x={9.6} y={15.6} w={1.2} d={1.2} h={0.42} tapa="#FFFFFF" izq="#E2E8F0" der="#CBD5E1" />
       </g>
 
-      {/* cafetería */}
-      <g pointerEvents="none">
-        <polygon points={rect(8.4, 17.3, 9.6, 2.5)} fill="#F1F5F9" stroke="#E2E8F0" strokeWidth={1.2} />
-        <Bloque x={9.2} y={17.6} w={4.6} d={0.9} h={0.95} tapa="#FFFFFF" izq="#DBEAFE" der="#BFDBFE" />
-        <Bloque x={9.5} y={17.7} z={0.95} w={0.65} d={0.55} h={0.7} tapa="#334155" izq="#1E293B" der="#0B1220" />
-        <circle cx={p(9.85, 18.25, 1.25)[0]} cy={p(9.85, 18.25, 1.25)[1]} r={1.8} fill="#34D399" className="led-parpadea-lento" />
-        {[10.8, 11.5, 12.6].map((x, i) => {
-          const [tx, ty] = p(x, 18.0, 0.95);
-          return <path key={x} d={`M${tx - 3},${ty - 7} h6 l-0.8,7 h-4.4 Z`} fill={i === 1 ? "#2563EB" : "#FFFFFF"} stroke="#94A3B8" strokeWidth={0.7} />;
-        })}
-        {[9.8, 11.2, 12.6].map((x) => (
-          <Bloque key={x} x={x} y={18.9} w={0.5} d={0.5} h={0.62} tapa="#2563EB" izq="#1D4ED8" der="#1E3A8A" />
+      {/* 06 · Comunicaciones */}
+      <Interactiva id="comunicaciones" etiqueta={etiqueta("comunicaciones", "06 Comunicaciones")} activa={enfocado === "comunicaciones"} onAbrir={onAbrir}>
+        <Alfombra s={salaDe("comunicaciones")} />
+        {/* exhibidor con informes */}
+        <Bloque x={8.9} y={17.5} w={0.9} d={0.5} h={1.3} tapa="#FFFFFF" izq="#FED7AA" der="#FDBA74" />
+        {[0.35, 0.75, 1.1].map((z, k) => (
+          <polygon key={z} points={pts([[9.0, 18.0, z], [9.7, 18.0, z], [9.7, 18.0, z + 0.28], [9.0, 18.0, z + 0.28]])} fill={["#FFFFFF", "#FFEDD5", "#DBEAFE"][k]} stroke="#FB923C" strokeWidth={0.6} />
         ))}
-        <Bloque x={15.2} y={17.7} w={0.7} d={0.7} h={1.05} tapa="#F8FAFC" izq="#E2E8F0" der="#CBD5E1" />
-        <Bloque x={15.35} y={17.85} z={1.05} w={0.4} d={0.4} h={0.55} tapa="#BAE6FD" izq="#7DD3FC" der="#38BDF8" linea="#0284C733" />
-        <Planta x={16.7} y={18.4} s={1} />
-        <Rotulo x={13.9} y={19.55} texto="Cafetería" color="#64748B" />
-      </g>
+        {/* impresora con hojas que salen */}
+        <Bloque x={15.2} y={17.45} w={1.0} d={0.75} h={0.8} tapa="#E2E8F0" izq="#CBD5E1" der="#94A3B8" />
+        <Bloque x={15.3} y={17.5} z={0.8} w={0.8} d={0.55} h={0.22} tapa="#334155" izq="#1E293B" der="#0B1220" />
+        <g className="hoja-imprime">
+          <polygon points={rect(15.4, 17.95, 0.6, 0.5, 0.82)} fill="#FFFFFF" stroke="#CBD5E1" strokeWidth={0.6} />
+          <line x1={p(15.5, 18.1, 0.83)[0]} y1={p(15.5, 18.1, 0.83)[1]} x2={p(15.85, 18.1, 0.83)[0]} y2={p(15.85, 18.1, 0.83)[1]} stroke="#C2410C" strokeWidth={1.2} />
+        </g>
+        <circle cx={p(16.2, 17.8, 0.65)[0]} cy={p(16.2, 17.8, 0.65)[1]} r={1.8} fill="#34D399" className="led-parpadea-lento" />
+        <Silla x={11.8} y={17.4} color="#C2410C" />
+        <Agente id="comunicaciones" x={12.2} y={18.2} />
+        <Escritorio x={11.0} y={18.55} w={2.4} d={0.95} lados={["#FFEDD5", "#FDC9A9"]} />
+        <Monitor x={11.75} y={18.62} />
+        <Planta x={17.0} y={18.9} s={0.85} />
+        <Rotulo x={8.7} y={19.72} num="06" texto="Comunicaciones" color="#C2410C" />
+      </Interactiva>
 
       {/* 04 · Analista (PulsoBot) */}
       <Interactiva id="analista" etiqueta={etiqueta("analista", "04 Analista, PulsoBot")} activa={enfocado === "analista"} onAbrir={onAbrir}>
@@ -571,31 +709,18 @@ export default function OficinaIso({
       {/* salida a PULSO: ciudad nocturna (ilustración, sin cifras) */}
       <Link href="/" aria-label="Salida a PULSO: ver la ciudad en vivo" className="salida-pulso">
         <g>
-          {[
-            [21.2, 13.0, 1.6],
-            [22.4, 12.4, 2.4],
-            [24.6, 12.2, 1.4],
-            [25.8, 13.2, 2.8],
-            [21.6, 15.4, 1.1],
-            [23.4, 14.6, 3.2],
-            [26.2, 15.8, 1.7],
-            [22.2, 17.6, 2.0],
-            [24.4, 17.0, 1.3],
-            [25.8, 18.2, 2.2],
-          ].map(([x, y, h], i) => (
-            <g key={i}>
-              <Bloque x={x} y={y} w={0.9} d={0.9} h={h} tapa="#3B6296" izq="#1E3A5F" der="#14294A" linea="#0B122066" />
-              {Array.from({ length: Math.floor(h / 0.5) }, (_, k) => {
-                const [wx, wy] = p(x + 0.3, y + 0.9, 0.3 + k * 0.5);
-                return <rect key={k} x={wx - 2} y={wy - 3} width={3} height={3} fill="#FDE68A" opacity={(i + k) % 3 ? 0.85 : 0.25} />;
-              })}
-            </g>
-          ))}
+          <Medellin />
+          <g transform={sobrePiso(20.6, 19.75)}>
+            <rect x={-4} y={-13} width={182} height={20} rx={10} fill={AZUL} />
+            <text x={10} y={1.5} fontSize={11.5} fontWeight={800} fill="#FFFFFF" letterSpacing="0.08em">
+              SALIDA A PULSO · EN VIVO →
+            </text>
+          </g>
           {/* faros (decorativos) */}
           {[
-            [20.6, 19.2],
-            [27.2, 11.8],
-            [27.0, 19.4],
+            [20.9, 11.6],
+            [24.4, 11.5],
+            [27.4, 11.6],
           ].map(([x, y], i) => {
             const [bx, by] = p(x, y);
             return (
@@ -605,32 +730,43 @@ export default function OficinaIso({
               </g>
             );
           })}
-          <g transform={sobrePiso(20.2, 11.75)}>
-            <rect x={-4} y={-13} width={182} height={20} rx={10} fill={AZUL} />
-            <text x={10} y={1.5} fontSize={11.5} fontWeight={800} fill="#FFFFFF" letterSpacing="0.08em">
-              SALIDA A PULSO · EN VIVO →
-            </text>
-          </g>
         </g>
       </Link>
 
       {/* ── etiquetas flotantes (siempre encima) ── */}
       <g onClick={() => onAbrir("reloj")} className="cursor-pointer">
-        <Etiqueta x={9.2} y={2.95} nombre="Relojero" info={agentes.reloj} />
+        <Ronda id="reloj">
+          <Etiqueta x={9.2} y={2.95} nombre="Relojero" info={agentes.reloj} />
+        </Ronda>
       </g>
       <g onClick={() => onAbrir("lab")} className="cursor-pointer">
-        <Etiqueta x={16.7} y={1.75} nombre="Científica de datos" info={agentes.lab} />
+        <Ronda id="lab">
+          <Etiqueta x={16.7} y={1.75} nombre="Científica de datos" info={agentes.lab} />
+        </Ronda>
       </g>
       <g onClick={() => onAbrir("monitoreo")} className="cursor-pointer">
-        <Etiqueta x={24.35} y={3.45} nombre="Operadora" info={agentes.monitoreo} />
+        <Ronda id="monitoreo">
+          <Etiqueta x={24.35} y={3.45} nombre="Operadora" info={agentes.monitoreo} />
+        </Ronda>
       </g>
       <g onClick={() => onAbrir("ventanilla")} className="cursor-pointer">
-        <Etiqueta x={2.9} y={11.2} nombre="Ventanilla" info={agentes.ventanilla} />
+        <Ronda id="ventanilla">
+          <Etiqueta x={2.9} y={11.2} nombre="Ventanilla" info={agentes.ventanilla} />
+        </Ronda>
       </g>
       <g onClick={() => onAbrir("analista")} className="cursor-pointer">
-        <Etiqueta x={3.65} y={16.5} nombre="PulsoBot" info={agentes.analista} />
+        <Ronda id="analista">
+          <Etiqueta x={3.65} y={16.5} nombre="PulsoBot" info={agentes.analista} />
+        </Ronda>
       </g>
-      <Etiqueta x={13.5} y={12.55} nombre="Recepción" info={agentes.guia} alto={68} />
+      <g onClick={() => onAbrir("comunicaciones")} className="cursor-pointer">
+        <Ronda id="comunicaciones">
+          <Etiqueta x={12.2} y={18.2} nombre="Vocera" info={agentes.comunicaciones} />
+        </Ronda>
+      </g>
+      <Ronda id="guia">
+        <Etiqueta x={13.5} y={12.55} nombre="Recepción" info={agentes.guia} alto={68} />
+      </Ronda>
     </svg>
   );
 }

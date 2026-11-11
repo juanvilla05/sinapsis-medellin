@@ -50,8 +50,10 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
       periodicidad declarada está atrasado (313 de 338); 271 críticos, 25 al día.
       Cada despacho abre su herramienta; también tienen página propia: /frescura, /laboratorio,
       /ventanilla (propuestas de mejora por conjunto), /monitoreo (Aire, Brecha 2014-2026, Comunas).
-      El botón "2D | 3D" muestra la misma oficina como maqueta 3D que se gira con el mouse o el dedo;
-      tocar un agente abre su despacho.
+      Tocar un agente abre su despacho. Más abajo, "Cómo se ve el problema": el flujo de los 433
+      conjuntos, el mapa de calor por secretaría y año, y la comparación entre dos secretarías.
+      Despacho "Comunicaciones": informe por secretaría para guardar como PDF (/informe/general,
+      /informe/salud).
    f) /laboratorio > "Víctimas en Incidentes viales": puntaje de calidad 0 -> 98, 52.428 filas
       vacías de 65.489 leídas y 7 columnas con datos personales fuera del CSV descargable.
    g) /ventanilla (o despacho 03 en la oficina): 428 de los 433 conjuntos tienen propuesta de mejora

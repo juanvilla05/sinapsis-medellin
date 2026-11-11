@@ -254,54 +254,76 @@ body {
   transform-box: view-box;
 }
 
-/* Etiquetas de la maqueta 3D (CSS2DRenderer) */
-.etiqueta-3d {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transform: translateY(-4px);
-  font-family: var(--font-jakarta), system-ui, sans-serif;
-  white-space: nowrap;
+/* Rutina de los agentes en la vista 2D: sentado → se levanta → camina → tablero → vuelve */
+.agente-ronda {
+  animation-name: ronda;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
-.etiqueta-3d-nombre {
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  background: #fff;
-  padding: 3px 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
-}
-.etiqueta-3d-cifra {
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-family: var(--font-jetbrains), monospace;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
-}
-.etiqueta-3d-late {
-  animation: etiqueta-late 1.8s ease-out infinite;
-}
-@keyframes etiqueta-late {
-  0% {
-    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.55);
+@keyframes ronda {
+  0%,
+  34% {
+    transform: translate(0, var(--sit));
   }
+  38% {
+    transform: translate(0, 0);
+  }
+  46% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  54%,
+  70% {
+    transform: translate(var(--x2), var(--y2));
+  }
+  78% {
+    transform: translate(var(--x1), var(--y1));
+  }
+  86% {
+    transform: translate(0, 0);
+  }
+  90%,
   100% {
-    box-shadow: 0 0 0 10px rgba(185, 28, 28, 0);
+    transform: translate(0, var(--sit));
   }
 }
-.maqueta-3d {
-  container-type: inline-size;
+
+/* Comunicaciones: una hoja sale de la impresora cada pocos segundos */
+.hoja-imprime {
+  animation: hoja 4s ease-in-out infinite;
 }
-@container (max-width: 560px) {
-  .etiqueta-3d-nombre {
-    display: none;
+@keyframes hoja {
+  0%,
+  20% {
+    transform: translate(0, 0);
+    opacity: 0;
   }
-  .etiqueta-3d-cifra {
-    padding: 2px 7px;
-    font-size: 10.5px;
+  35% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: translate(-6px, 6px);
+    opacity: 1;
+  }
+}
+
+/* Informes imprimibles (Comunicaciones) */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  .no-imprimir {
+    display: none !important;
+  }
+  .informe {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .informe-bloque,
+  .informe tr {
+    break-inside: avoid;
+  }
+  body {
+    background: #fff !important;
   }
 }

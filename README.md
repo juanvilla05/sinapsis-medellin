@@ -21,7 +21,9 @@ La portada es un **mapa 3D de Medellín** (MapLibre + deck.gl sobre OpenFreeMap,
 
 ## La Agencia de datos (`/alpujarra`)
 
-La oficina detrás del mapa: una **vista isométrica 2D** (SVG, sin WebGL) que se entiende de un vistazo, sin caminar. Al fondo está el **Archivo MEData** con los datos crudos; una línea animada los lleva por los despachos hasta la **Salida a PULSO**, que abre el mapa de la ciudad. Cada agente tiene su puesto, su nombre y su cifra real con el color de su estado (trabajando, esperando, te necesita, sin señal). Tocar un despacho, en la oficina, en la barra lateral o en la ficha del equipo, abre su herramienta.
+La oficina detrás del mapa: una **vista isométrica 2D** (SVG, sin WebGL) que se entiende de un vistazo, sin caminar. Al fondo está el **Archivo MEData** con los datos crudos; una línea animada los lleva por los despachos hasta la **Salida a PULSO**, que abre el mapa de la ciudad. Cada agente tiene su puesto, su nombre y su cifra real con el color de su estado (trabajando, esperando, te necesita, sin señal). Tocar un despacho, en la oficina, en la barra lateral o en la ficha del equipo, abre su herramienta. Los agentes tienen rutina (se levantan, van a su tablero y vuelven) y la Salida a PULSO muestra referencias de Medellín: el Coltejer, la Gobernación, la Alcaldía, La Alpujarra y el río.
+
+Debajo, **"Cómo se ve el problema"**: un diagrama de flujo animado del catálogo (433 conjuntos → periodicidad → al día, atrasados o críticos → 428 con propuesta), un mapa de calor del año de la última actualización por secretaría y una araña que compara dos secretarías en cinco señales de calidad (`src/lib/visuales.ts`, todo desde el catálogo).
 
 - Arriba, cuatro cifras reales: % de conjuntos atrasados, conjuntos auditados, conjuntos críticos y estaciones de SIATA reportando.
 - Funciona en celular, tablet y computador; con teclado, cada sala es un botón (Tab + Enter).
@@ -36,6 +38,7 @@ La oficina detrás del mapa: una **vista isométrica 2D** (SVG, sin WebGL) que s
 | Ventanilla de Apertura (Agencia y `/ventanilla`) | ✅ | Una propuesta por conjunto con problemas (428 de 433): actualizarlo, declarar su periodicidad, publicar los datos detrás de un tablero, documentar sus columnas o ampliar su descripción; prioridad alta, media o baja, filtro por secretaría y descarga en CSV. Reglas deterministas en `src/lib/ventanilla.ts` |
 | Analista IA · PulsoBot (Agencia y `/analista`) | ✅ | Preguntas en español; cada cifra sale de una herramienta determinista y se cita con conjunto, campo, licencia y fecha de corte. Con clave usa Gemini; sin clave responde en modo directo |
 | Sala de Monitoreo (Agencia y `/monitoreo`) | ✅ | Aire en vivo de SIATA (ICA, Resolución 2254 de 2017), brecha de muertes viales MEData vs Policía, y hurto e incidentes por comuna en tabla, mapa y Medellín 3D |
+| Comunicaciones (Agencia y `/informe/<secretaría>`) | ✅ | Informe en PDF por secretaría (y uno general): frescura de sus conjuntos, tabla con estado y última modificación, y las propuestas de la Ventanilla; descarga de propuestas en CSV. Solo metadatos públicos (`src/lib/informes.ts`) |
 
 ## Ejecutar en local
 

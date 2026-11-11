@@ -8,7 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ColumnLayer, GeoJsonLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { LayersList, PickingInfo } from "@deck.gl/core";
-import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso } from "../tipos";
+import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso, VistaPulso } from "../tipos";
 import { estiloPulso, URL_ESTILO_BASE } from "./estilo";
 import {
   acumulado,
@@ -39,6 +39,9 @@ const ALTURA_TOPE_M = 1300;
 const METROS_POR_UG = 55;
 /** Al elegir algo, lo demás queda translúcido (≈16 %) para que lo elegido se lea solo. */
 const ALFA_ATENUADO = 0.16;
+/** en la vista por comunas, la comuna con más casos se levanta ≈ 1,2 km */
+const ALTURA_COMUNA_M = 1200;
+const GRIS_SIN_DATO: [number, number, number] = [148, 163, 184];
 
 type Rgb = [number, number, number];
 type Rgba4 = [number, number, number, number];
@@ -56,6 +59,8 @@ interface PaletaCapas {
   bordeExtremo: Rgba4;
   etiquetaTexto: Rgba4;
   etiquetaFondo: Rgba4;
+  /** velo sobre las demás comunas cuando se aísla una */
+  velo: Rgb;
 }
 const PALETA_CAPAS: Record<TemaPulso, PaletaCapas> = {
   oscuro: {
@@ -71,6 +76,7 @@ const PALETA_CAPAS: Record<TemaPulso, PaletaCapas> = {
     bordeExtremo: [11, 18, 32, 255],
     etiquetaTexto: [255, 255, 255, 255],
     etiquetaFondo: [11, 18, 32, 220],
+    velo: [11, 18, 32],
   },
   claro: {
     comunaLinea: [29, 78, 216],
@@ -85,6 +91,7 @@ const PALETA_CAPAS: Record<TemaPulso, PaletaCapas> = {
     bordeExtremo: [255, 255, 255, 255],
     etiquetaTexto: [15, 23, 42, 255],
     etiquetaFondo: [255, 255, 255, 235],
+    velo: [241, 245, 249],
   },
 };
 
@@ -101,6 +108,9 @@ export interface EstadoMotor {
   rejillas: Partial<Record<CapaRejilla, RejillaMapa | null>>;
   comunas: ComunaMapa[] | null;
   comunaResaltada: string | null;
+  vista: VistaPulso;
+  /** posición 0–1 de cada comuna en la rampa para el dato activo (vista por comunas); null = sin dato */
+  valoresComuna: Map<string, { t: number }> | null;
   /** punto seleccionado (estación o celda) para dibujar el anillo */
   seleccion: { lng: number; lat: number } | null;
   rutas: RutasMapa | null;
@@ -210,10 +220,13 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     rejillas: {},
     comunas: null,
     comunaResaltada: null,
+    vista: "puntos",
+    valoresComuna: null,
     seleccion: null,
     rutas: null,
   };
   const crece: Partial<Record<CapaPulso, number>> = {};
+  let creceVista: number | undefined;
   let rutasPrep: { otras: RutaPulso[]; elegida: RutaPulso; trayecto: Trayecto[]; total: number; extremos: Extremo[] } | null = null;
   let Trips: TripsCtor | null = null;
   let pidiendoTrips = false;
@@ -340,11 +353,23 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
   const mismaPos = (a: { lng: number; lat: number }, b: { lng: number; lat: number }) => a.lng === b.lng && a.lat === b.lat;
   let memoDestacadas: { clave: string; celdas: CeldaMapa[] } | null = null;
   /** Celdas que siguen sólidas con la selección actual; null = no hay selección que atenúe esta rejilla. */
+  let memoComuna: { clave: string; celdas: CeldaMapa[] } | null = null;
+  /** Celdas de la rejilla que caen dentro de la comuna aislada (vista "una"); vacío si aún no se eligió. */
+  function celdasDeComuna(capa: CapaPulso, celdas: CeldaMapa[]): CeldaMapa[] {
+    const comuna = st.comunaResaltada ? st.comunas?.find((c) => c.codigo === st.comunaResaltada) : undefined;
+    if (!comuna) return [];
+    const clave = `${capa}|${celdas.length}|${comuna.codigo}`;
+    if (memoComuna?.clave === clave) return memoComuna.celdas;
+    const dentro = celdas.filter((c) => puntoEnGeometria(c.lng, c.lat, comuna.feature.geometry));
+    memoComuna = { clave, celdas: dentro };
+    return dentro;
+  }
   function celdasDestacadas(capa: CapaPulso, celdas: CeldaMapa[]): CeldaMapa[] | null {
     const sel = st.seleccion;
-    const comuna = st.comunaResaltada ? st.comunas?.find((c) => c.codigo === st.comunaResaltada) : undefined;
+    // en la vista de una comuna ya solo se dibujan sus celdas: solo atenúa la celda elegida
+    const comuna = st.vista === "una" ? undefined : st.comunaResaltada ? st.comunas?.find((c) => c.codigo === st.comunaResaltada) : undefined;
     if (!sel && !comuna) return null;
-    const clave = `${capa}|${celdas.length}|${sel ? `${sel.lng},${sel.lat}` : `c${comuna!.codigo}`}`;
+    const clave = `${st.vista}|${capa}|${celdas.length}|${sel ? `${sel.lng},${sel.lat}` : `c${comuna!.codigo}`}`;
     if (memoDestacadas?.clave === clave) return memoDestacadas.celdas;
     const dentro = sel ? celdas.filter((c) => mismaPos(c, sel)) : celdas.filter((c) => puntoEnGeometria(c.lng, c.lat, comuna!.feature.geometry));
     memoDestacadas = { clave, celdas: dentro };
@@ -356,8 +381,97 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     // al acercarse, las columnas se achican para no tapar la ciudad (altura en pantalla más estable)
     const fz = Math.min(1, Math.pow(2, (12 - map.getZoom()) * 0.8));
 
+    const porComunas = st.vista === "comunas";
+    const unaComuna = st.vista === "una";
+
+    // 5a) vista por comunas: cada comuna es un bloque cuyo color y altura salen del dato activo
+    if (porComunas && st.comunas) {
+      const valores = st.valoresComuna;
+      const gv = reducido || creceVista === undefined ? 1 : suave((ahora - creceVista) / CRECER_MS);
+      if (gv >= 1) creceVista = undefined;
+      const escala = ALTURA_COMUNA_M * Math.max(0.001, gv) * Math.max(0.35, fz);
+      const tDe = (codigo: string) => valores?.get(codigo)?.t ?? null;
+      const alfaDe = (codigo: string) => (st.comunaResaltada && codigo !== st.comunaResaltada ? 80 : 225);
+      const clave = [st.comunaResaltada, tema, valores];
+      capas.push(
+        new GeoJsonLayer<FeatureComuna["properties"]>({
+          id: "comunas",
+          data: st.comunas.map((c) => c.feature),
+          filled: true,
+          stroked: false,
+          extruded: Boolean(valores),
+          wireframe: true,
+          pickable: true,
+          autoHighlight: true,
+          highlightColor: P.resalte,
+          getElevation: (f) => tDe(f.properties.codigo) ?? 0,
+          elevationScale: escala,
+          getFillColor: (f) => {
+            const t = tDe(f.properties.codigo);
+            return t === null ? [...GRIS_SIN_DATO, valores ? 70 : 40] : colorRampa(t, alfaDe(f.properties.codigo), tema);
+          },
+          getLineColor: [...P.comunaLinea, 200],
+          updateTriggers: { getFillColor: clave, getElevation: valores },
+          material: { ambient: 0.6, diffuse: 0.5, shininess: 16, specularColor: [90, 140, 200] as Rgb },
+        }),
+        new TextLayer<ComunaMapa>({
+          id: "comunas-nombres",
+          data: st.comunas,
+          getPosition: (c) => [c.centro[0], c.centro[1], (tDe(c.codigo) ?? 0) * escala + 40],
+          getText: (c) => c.etiqueta,
+          getSize: (c) => (c.codigo === st.comunaResaltada ? 15 : 12),
+          getColor: (c) => (c.codigo === st.comunaResaltada ? P.textoComunaSel : P.textoComuna),
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontWeight: 700,
+          characterSet: "auto",
+          fontSettings: { sdf: true },
+          outlineWidth: 3,
+          outlineColor: P.contornoTexto,
+          updateTriggers: { getPosition: [valores, escala], getSize: st.comunaResaltada, getColor: [st.comunaResaltada, tema] },
+          parameters: { depthCompare: "always" },
+        }),
+      );
+    }
+
+    // 5b) una sola comuna: las demás quedan bajo un velo y la elegida con contorno fuerte
+    if (unaComuna && st.comunas) {
+      capas.push(
+        new GeoJsonLayer<FeatureComuna["properties"]>({
+          id: "comunas",
+          data: st.comunas.map((c) => c.feature),
+          filled: true,
+          stroked: true,
+          pickable: true,
+          autoHighlight: true,
+          highlightColor: [...P.comunaLinea, 60],
+          getFillColor: (f) => (!st.comunaResaltada ? [...P.comunaRelleno, 28] : f.properties.codigo === st.comunaResaltada ? [...P.comunaRelleno, 14] : [...P.velo, 165]),
+          getLineColor: (f) => (f.properties.codigo === st.comunaResaltada ? [...P.comunaLineaSel, 255] : [...P.comunaLinea, st.comunaResaltada ? 70 : 200]),
+          getLineWidth: (f) => (f.properties.codigo === st.comunaResaltada ? 3.5 : 1.2),
+          lineWidthUnits: "pixels",
+          updateTriggers: { getFillColor: [st.comunaResaltada, tema], getLineColor: [st.comunaResaltada, tema], getLineWidth: st.comunaResaltada },
+          parameters: { depthCompare: "always", depthWriteEnabled: false },
+        }),
+        new TextLayer<ComunaMapa>({
+          id: "comunas-nombres",
+          data: st.comunaResaltada ? st.comunas.filter((c) => c.codigo === st.comunaResaltada) : st.comunas,
+          getPosition: (c) => c.centro,
+          getText: (c) => c.etiqueta,
+          getSize: st.comunaResaltada ? 16 : 12,
+          getColor: st.comunaResaltada ? P.textoComunaSel : P.textoComuna,
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontWeight: 700,
+          characterSet: "auto",
+          fontSettings: { sdf: true },
+          outlineWidth: 3,
+          outlineColor: P.contornoTexto,
+          updateTriggers: { getColor: [st.comunaResaltada, tema] },
+          parameters: { depthCompare: "always" },
+        }),
+      );
+    }
+
     // 5) comunas: relleno tenue, contorno luminoso y nombres en zoom alto
-    if (st.capas.comunas && st.comunas) {
+    if (!porComunas && !unaComuna && st.capas.comunas && st.comunas) {
       const features = st.comunas.map((c) => c.feature);
       capas.push(
         new GeoJsonLayer<FeatureComuna["properties"]>({
@@ -415,9 +529,12 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     // 2–4) rejillas de 250 m: una a la vez, altura ∝ √n con tope en el p99
     for (const capa of ["incidentes", "victimas", "hurto"] as const) {
       const rej = st.rejillas[capa];
-      if (!st.capas[capa] || !rej) continue;
+      // por comunas no hay columnas; en "una comuna" solo las de esa comuna
+      if (!st.capas[capa] || !rej || porComunas) continue;
       const g = factorCrecer(capa, ahora);
-      const destacadas = celdasDestacadas(capa, rej.celdas);
+      const base = unaComuna ? celdasDeComuna(capa, rej.celdas) : rej.celdas;
+      if (base.length === 0) continue;
+      const destacadas = celdasDestacadas(capa, base);
       const alfa = destacadas ? Math.round(235 * ALFA_ATENUADO) : 235;
       const columnas = {
         diskResolution: 4,
@@ -436,7 +553,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
         new ColumnLayer<CeldaMapa>({
           ...columnas,
           id: `rejilla-${capa}`,
-          data: rej.celdas,
+          data: base,
           getFillColor: (c) => colorRampa(c.t, alfa, tema),
           updateTriggers: { getFillColor: [alfa, tema] },
           // translúcidas no escriben profundidad: así no tapan a la columna elegida ni a la ciudad
@@ -459,7 +576,10 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     // 1) aire: faros de PM2.5 + pulso
     if (st.capas.aire && st.estaciones) {
       const g = factorCrecer("aire", ahora);
-      const conDato = st.estaciones.filter((e) => e.pm25 !== null);
+      // al aislar una comuna solo quedan las estaciones que están dentro de ella
+      const aislada = unaComuna && st.comunaResaltada ? st.comunas?.find((c) => c.codigo === st.comunaResaltada) : undefined;
+      const visibles = aislada ? st.estaciones.filter((e) => puntoEnGeometria(e.lng, e.lat, aislada.feature.geometry)) : st.estaciones;
+      const conDato = visibles.filter((e) => e.pm25 !== null);
       const enMed = conDato.filter((e) => e.enMedellin);
       const fase = reducido ? 0.35 : (ahora % 2400) / 2400;
       // con una estación o celda elegida, los demás faros se vuelven translúcidos
@@ -468,7 +588,8 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       const claveSel = sel ? `${sel.lng},${sel.lat}` : "";
       for (const [k, desfase] of [0, 0.5].entries()) {
         const f = (fase + desfase) % 1;
-        if (reducido && k > 0) break;
+        // por comunas el aire queda como puntos planos: sin pulso ni faros que tapen los bloques
+        if (porComunas || (reducido && k > 0)) break;
         capas.push(
           new ScatterplotLayer<EstacionSiata>({
             id: `aire-pulso-${k}`,
@@ -490,7 +611,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       capas.push(
         new ScatterplotLayer<EstacionSiata>({
           id: "aire-base",
-          data: st.estaciones,
+          data: visibles,
           pickable: true,
           getPosition: (e) => [e.lng, e.lat],
           getRadius: 170,
@@ -500,6 +621,9 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           updateTriggers: { getFillColor: claveSel },
           parameters: { depthCompare: "always", depthWriteEnabled: false },
         }),
+      );
+      if (!porComunas)
+        capas.push(
         new ColumnLayer<EstacionSiata>({
           id: "aire-faros",
           data: conDato,
@@ -640,9 +764,9 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
   const animando = () => {
     if (destruido || document.hidden) return false;
     if (girando) return true;
-    if (Object.keys(crece).length > 0) return true;
+    if (Object.keys(crece).length > 0 || creceVista !== undefined) return true;
     if (reducido) return false;
-    if (st.capas.aire && st.estaciones?.some((e) => e.enMedellin && e.pm25 !== null)) return true;
+    if (st.vista !== "comunas" && st.capas.aire && st.estaciones?.some((e) => e.enMedellin && e.pm25 !== null)) return true;
     return Boolean(rutasPrep && Trips);
   };
   function cuadro(ahora: number) {
@@ -687,7 +811,12 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       zoom: o.zoom ?? Math.max(map.getZoom(), 13.6),
       pitch: o.inclinacion ?? Math.max(map.getPitch(), 50),
       bearing: o.rumbo ?? map.getBearing(),
-      offset: [0, conTarjeta && contenedor.clientWidth < 768 ? -Math.round(contenedor.clientHeight * 0.16) : 0] as [number, number],
+      // con tarjeta abierta el punto queda fuera de ella: arriba en móvil, a la derecha en escritorio
+      offset: (conTarjeta
+        ? contenedor.clientWidth < 768
+          ? [0, -Math.round(contenedor.clientHeight * 0.16)]
+          : [Math.min(280, Math.round(contenedor.clientWidth * 0.25)), 0]
+        : [0, 0]) as [number, number],
     };
     if (reducido) map.jumpTo(destino);
     else map.flyTo({ ...destino, duration: 2200, curve: 1.3, essential: true });
@@ -774,6 +903,15 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
       if (p.estaciones && !st.estaciones) crece.aire = ahora;
       if (p.rejillas) {
         for (const c of ["incidentes", "victimas", "hurto"] as const) if (p.rejillas[c] && !st.rejillas[c]) crece[c] = ahora;
+      }
+      if (p.vista && p.vista !== st.vista) {
+        creceVista = ahora;
+        for (const c of ["incidentes", "victimas", "hurto"] as const) if (st.capas[c]) crece[c] = ahora;
+      }
+      if (p.valoresComuna !== undefined && p.valoresComuna !== st.valoresComuna && (p.vista ?? st.vista) === "comunas") creceVista = ahora;
+      // al aislar otra comuna, sus columnas vuelven a crecer
+      if ((p.vista ?? st.vista) === "una" && p.comunaResaltada !== undefined && p.comunaResaltada !== st.comunaResaltada) {
+        for (const c of ["incidentes", "victimas", "hurto"] as const) if (st.capas[c]) crece[c] = ahora;
       }
       const rutasNuevas = p.rutas !== undefined && p.rutas?.rutas !== st.rutas?.rutas;
       Object.assign(st, p);
