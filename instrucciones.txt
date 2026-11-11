@@ -13,7 +13,6 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
 2. PROBARLO EN LÍNEA (recomendado, no requiere cuenta)
    Abrir https://pulsomedellin.com
    Agencia de datos (calidad de los datos): https://pulsomedellin.com/alpujarra
-   Versión sin 3D (panel ejecutivo): https://pulsomedellin.com/panel
 
 3. EJECUTARLO EN EL COMPUTADOR
    Requisitos: Node.js 20 o superior (probado con Node 24), navegador con WebGL y conexión a internet.
@@ -47,11 +46,17 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
       la versión en línea): alternativas con duración, PM2.5 estimado e incidentes históricos
       cercanos, dibujadas sobre el mapa.
    e) "Agencia de datos" (/alpujarra): la oficina donde los agentes auditan y limpian los datos.
-      Arriba, "92,6 %" de los conjuntos de MEData con periodicidad declarada está atrasado (313 de 338).
+      Debajo de la oficina, "Lo que encontró la Agencia": "92,6 %" de los conjuntos de MEData con
+      periodicidad declarada está atrasado (313 de 338); 271 críticos, 25 al día.
       Cada despacho abre su herramienta; también tienen página propia: /frescura, /laboratorio,
       /ventanilla (propuestas de mejora por conjunto), /monitoreo (Aire, Brecha 2014-2026, Comunas).
+      El botón "2D | 3D" muestra la misma oficina como maqueta 3D que se gira con el mouse o el dedo;
+      tocar un agente abre su despacho.
    f) /laboratorio > "Víctimas en Incidentes viales": puntaje de calidad 0 -> 98, 52.428 filas
       vacías de 65.489 leídas y 7 columnas con datos personales fuera del CSV descargable.
+   g) /ventanilla (o despacho 03 en la oficina): 428 de los 433 conjuntos tienen propuesta de mejora
+      (291 de prioridad alta): actualizar, declarar periodicidad, publicar los datos detrás de un
+      tablero, documentar columnas o ampliar la descripción. Filtro por secretaría y descarga en CSV.
    Si una fuente no responde, la aplicación lo dice y muestra la copia guardada con su fecha.
 
 5. DATOS Y FUENTES (sin datos personales: solo agregados; conteos de 1 a 4 suprimidos)
@@ -74,6 +79,8 @@ Modalidad: Visualización · Repositorio: https://github.com/juanvilla05/sinapsi
    src/lib/fixtures/siata-602.json, siata-603.json (y en vivo) · SIATA, capas ICA PM2.5 de estaciones ·
      https://siata.gov.co · licencia no declarada por la fuente (se usa con atribución)
    Laboratorio: cualquier archivo CSV de MEData, leído en vivo; no se guarda.
+   Ventanilla de Apertura: propuestas calculadas del mismo catálogo (src/data/catalogo.json) con reglas
+     deterministas en src/lib/ventanilla.ts; solo metadatos públicos.
    Rutas: Google Routes y Places solo calculan la geometría y los tiempos; el puntaje usa SIATA y MEData.
    Mapa base: OpenFreeMap (© OpenStreetMap), solo cartografía; ninguna cifra sale de él.
    Detalle de cada agregado y de la supresión: src/lib/monitoreo/datos/README.md

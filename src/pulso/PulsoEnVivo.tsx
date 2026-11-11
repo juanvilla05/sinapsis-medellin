@@ -71,9 +71,6 @@ PulsoBot
             <span className="sm:hidden">Agencia</span>
             <span className="hidden sm:inline">Agencia de datos</span>
           </Link>
-          <Link href="/panel" className={`${pill} hidden text-tinta/80 hover:bg-tinta/10 sm:inline-flex`}>
-            Panel
-          </Link>
           <button
             type="button"
             onClick={alternarTema}

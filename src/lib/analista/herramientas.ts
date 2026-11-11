@@ -448,7 +448,7 @@ const planearRuta = definir<z.infer<typeof esquemaRuta>, DatosRuta>({
 /* ───────────── controlarApp (PulsoBot maneja la plataforma) ───────────── */
 
 const CAPAS_APP = ["aire", "incidentes", "victimas", "hurto", "comunas"] as const;
-const SECCIONES_APP = { inicio: "/", alpujarra: "/alpujarra", panel: "/panel", monitoreo: "/monitoreo", laboratorio: "/laboratorio", frescura: "/frescura", analista: "/analista" } as const;
+const SECCIONES_APP = { inicio: "/", alpujarra: "/alpujarra", monitoreo: "/monitoreo", laboratorio: "/laboratorio", frescura: "/frescura", analista: "/analista" } as const;
 const NOMBRE_CAPA_APP: Record<(typeof CAPAS_APP)[number], string> = {
   aire: "aire (PM2.5 de SIATA)",
   incidentes: "incidentes viales",
@@ -459,7 +459,6 @@ const NOMBRE_CAPA_APP: Record<(typeof CAPAS_APP)[number], string> = {
 const NOMBRE_SECCION_APP: Record<keyof typeof SECCIONES_APP, string> = {
   inicio: "el mapa en vivo",
   alpujarra: "la Agencia de datos",
-  panel: "el panel ejecutivo",
   monitoreo: "la Sala de Monitoreo",
   laboratorio: "el Laboratorio de Limpieza",
   frescura: "el Reloj de Frescura",
@@ -474,7 +473,7 @@ const esquemaControl = z.object({
   visible: z.boolean().optional().describe("true para mostrar la capa (por defecto), false para ocultarla"),
   tema: z.enum(["claro", "oscuro"]).optional(),
   activo: z.boolean().optional().describe("recorrido encendido (por defecto) o apagado"),
-  seccion: z.enum(["inicio", "alpujarra", "panel", "monitoreo", "laboratorio", "frescura", "analista"]).optional(),
+  seccion: z.enum(["inicio", "alpujarra", "monitoreo", "laboratorio", "frescura", "analista"]).optional(),
 });
 
 export interface DatosControl {
@@ -490,7 +489,7 @@ export interface DatosControl {
 
 const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
   descripcion:
-    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, panel, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
+    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
   esquema: esquemaControl,
   async ejecutar(a) {
     const listo = (datos: DatosControl): Respuesta<DatosControl> => ({ ok: true, datos, citas: [] });
@@ -516,7 +515,7 @@ const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
       case "limpiar-rutas":
         return listo({ accion: "limpiar-rutas", texto: "Listo, borré las rutas del mapa." });
       case "ir-a": {
-        if (!a.seccion) return falta("Dime a qué sección: la Agencia de datos, el panel, el monitoreo, el laboratorio o la frescura.");
+        if (!a.seccion) return falta("Dime a qué sección: la Agencia de datos, el monitoreo, el laboratorio o la frescura.");
         return listo({ accion: "ir-a", ruta: SECCIONES_APP[a.seccion], texto: `Listo, te llevo a ${NOMBRE_SECCION_APP[a.seccion]}.` });
       }
     }
