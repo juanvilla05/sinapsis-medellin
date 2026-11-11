@@ -1,0 +1,14 @@
+# Resumen del pitch
+
+Hackathon de Datos ITM 2026 · Equipo finalista · PULSO Medellín
+
+| Campo | Respuesta |
+|---|---|
+| **Equipo y proyecto** | PULSO Medellín (Isabela Zuluaga y Juan Camilo Villa) · PULSO Medellín, la ciudad en vivo con datos abiertos · Visualización · Innovación y tecnología |
+| **Mensaje central** | ¿Qué tan al día están los datos abiertos de Medellín? El 92,6 % de los conjuntos de MEData que prometen actualizarse está atrasado (313 de 338). Un ejemplo: MEData no publica muertes viales desde 2021, mientras la Policía reporta 563 en 2023. PULSO lo muestra en un mapa en vivo y le entrega a la Alcaldía 428 mejoras concretas. |
+| **1. Problema y usuario · 45 s** | Medellín publica 433 conjuntos abiertos, pero nadie dice qué tan viejos están: quien consulta seguridad vial, hurto o aire decide con cifras de hace años sin saberlo. Usuarios: la persona que se mueve por la ciudad, el equipo de MEData y las secretarías que publican, y periodistas e investigadores. |
+| **2. Datos y método · 75 s** | MEData: catálogo completo (433), Incidentes viales, Víctimas en incidentes viales, Hurto a persona y el consolidado de criminalidad por comuna. Además SIATA (PM2.5 en vivo), Policía Nacional en datos.gov.co y comunas de GeoMedellín. Un pipeline audita el catálogo (periodicidad frente a última modificación); los archivos se limpian (812.474 filas vacías, una coordenada por defecto con 19.613 incidentes, fechas no estándar) y se agregan en celdas de 250 m y por comuna, suprimiendo conteos de 1 a 4. La IA no genera cifras. |
+| **3. Demostración del artefacto · 120 s** | pulsomedellin.com → aire de SIATA en vivo → capa Incidentes en columnas de 250 m → vista «Comunas»: La Candelaria con 52.147 incidentes (20,8 %) → por voz a PulsoBot: «muéstrame solo Belén con los hurtos» y «¿cuántas muertes viales hubo en 2023?» (563 según la Policía, MEData sin publicar) → Agencia de datos: 92,6 % atrasado y «Cómo se ve el problema» → Ventanilla: propuestas en CSV e informe PDF por secretaría. |
+| **4. Aporte a MEData y limitaciones · 60 s** | Proponemos actualizar incidentes y víctimas hasta 2026 con FECHA_CORTE; dejar LOCATION vacío cuando no se conoce el lugar y agregar PRECISION_UBICACION y COD_COMUNA; fechas en ISO 8601 (hoy 410 no la cumplen), periodicidad obligatoria (faltan 95), diccionario (faltan 21) y archivo descargable (20 solo tienen tablero). Límites: la frescura se mide con la fecha del catálogo; las capas son históricas (2020, 2021 y 2023); la brecha no dice qué cifra es la correcta; el PM2.5 de una ruta es estimado; no calificamos barrios. |
+| **Quién presenta cada parte** | Isabela: 1, 2 y 4 · Juan Camilo: 3 (demostración) |
+| **Recursos para la presentación** | Portátil propio con Chrome, conexión a internet y datos del celular como respaldo; pulsomedellin.com y el repositorio github.com/juanvilla05/sinapsis-medellin; video de la demostración como respaldo si falla internet. |
