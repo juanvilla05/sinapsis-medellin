@@ -15,7 +15,7 @@ import {
 } from "@/lib/monitoreo/consultas";
 import { planearRuta as planearRutaPulso, type DatosRuta } from "@/lib/rutas/planear";
 import { obtenerAire } from "@/lib/siata";
-import { MUNICIPIOS_AMVA } from "@/lib/territorio";
+import { COMUNAS_MEDELLIN, MUNICIPIOS_AMVA, comunaPorCodigo, comunaPorNombre, normalizarCodigoComuna } from "@/lib/territorio";
 import { esFechaSoloDia, fechaColombia } from "@/mundo/areas";
 import { MODOS_RUTA } from "@/pulso/rutas/constantes";
 import { explicarFuentes, TEMAS_FAQ } from "./faq";
@@ -467,10 +467,15 @@ const NOMBRE_SECCION_APP: Record<keyof typeof SECCIONES_APP, string> = {
 
 const esquemaControl = z.object({
   accion: z
-    .enum(["capa", "tema", "recorrido", "vista-inicial", "abrir-rutas", "limpiar-rutas", "ir-a"])
-    .describe("capa: mostrar u ocultar una capa del mapa · tema: claro u oscuro · recorrido: giro automático de la cámara · vista-inicial: volver a la vista general · abrir-rutas: abrir el planificador · limpiar-rutas: borrar rutas dibujadas · ir-a: abrir otra sección"),
+    .enum(["capa", "vista", "tema", "recorrido", "vista-inicial", "abrir-rutas", "limpiar-rutas", "ir-a"])
+    .describe("capa: mostrar u ocultar una capa del mapa · vista: cambiar cómo se pinta el dato (puntos, comunas o una-comuna) · tema: claro u oscuro · recorrido: giro automático de la cámara · vista-inicial: volver a la vista general · abrir-rutas: abrir el planificador · limpiar-rutas: borrar rutas dibujadas · ir-a: abrir otra sección"),
   capa: z.enum(CAPAS_APP).optional(),
   visible: z.boolean().optional().describe("true para mostrar la capa (por defecto), false para ocultarla"),
+  vista: z
+    .enum(["puntos", "comunas", "una-comuna"])
+    .optional()
+    .describe("puntos: columnas de 250 m (puntos calientes) · comunas: toda la ciudad coloreada por comunas, sin columnas · una-comuna: solo una comuna, con sus columnas y su tarjeta"),
+  comuna: z.string().optional().describe("para vista una-comuna: nombre o número de la comuna o corregimiento (por ejemplo 'Belén' o '16')"),
   tema: z.enum(["claro", "oscuro"]).optional(),
   activo: z.boolean().optional().describe("recorrido encendido (por defecto) o apagado"),
   seccion: z.enum(["inicio", "alpujarra", "monitoreo", "laboratorio", "frescura", "analista"]).optional(),
@@ -482,14 +487,27 @@ export interface DatosControl {
   texto: string;
   capa?: (typeof CAPAS_APP)[number];
   visible?: boolean;
+  vista?: "puntos" | "comunas" | "una";
+  /** código oficial de la comuna a aislar (vista "una") */
+  comuna?: string;
   tema?: "claro" | "oscuro";
   activo?: boolean;
   ruta?: string;
 }
 
+const plano = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+/** "Poblado", "comuna Laureles", "el centro" → código, si el texto contiene o está contenido en un nombre oficial. */
+function comunaParecida(texto: string): string | null {
+  const t = plano(texto).replace(/^(la |el )?(comuna|corregimiento)( de)? /, "");
+  if (!t) return null;
+  if (t === "centro" || t === "el centro") return "10";
+  const c = COMUNAS_MEDELLIN.find((x) => plano(x.nombre).includes(t) || t.includes(plano(x.nombre)));
+  return c?.codigo ?? null;
+}
+
 const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
   descripcion:
-    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
+    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia la vista del mapa (puntos calientes en columnas, toda la ciudad por comunas o una sola comuna), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
   esquema: esquemaControl,
   async ejecutar(a) {
     const listo = (datos: DatosControl): Respuesta<DatosControl> => ({ ok: true, datos, citas: [] });
@@ -499,6 +517,23 @@ const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
         if (!a.capa) return falta("Dime qué capa: aire, incidentes viales, víctimas, hurto o comunas.");
         const visible = a.visible ?? true;
         return listo({ accion: "capa", capa: a.capa, visible, texto: visible ? `Listo, te muestro en el mapa la capa de ${NOMBRE_CAPA_APP[a.capa]}.` : `Listo, oculté la capa de ${NOMBRE_CAPA_APP[a.capa]}.` });
+      }
+      case "vista": {
+        if (!a.vista) return falta("Dime cómo quieres ver el mapa: por puntos, por comunas o una sola comuna.");
+        const dato = a.capa && a.capa !== "aire" && a.capa !== "comunas" ? a.capa : undefined;
+        const conDato = dato ? ` con ${NOMBRE_CAPA_APP[dato]}` : "";
+        if (a.vista === "puntos") return listo({ accion: "vista", vista: "puntos", ...(dato ? { capa: dato } : {}), texto: `Listo, te muestro los puntos calientes en columnas de 250 metros${conDato}.` });
+        if (a.vista === "comunas") return listo({ accion: "vista", vista: "comunas", ...(dato ? { capa: dato } : {}), texto: `Listo, te muestro Medellín por comunas${conDato}. Toca una comuna para ver su detalle.` });
+        const codigo = a.comuna ? (normalizarCodigoComuna(a.comuna.replace(/^comuna\s+/i, "")) ?? comunaPorNombre(a.comuna)?.codigo ?? comunaParecida(a.comuna)) : null;
+        if (a.comuna && !codigo) return falta(`No reconozco la comuna "${a.comuna}". Dime su nombre o su número, por ejemplo Belén o 16.`);
+        const c = comunaPorCodigo(codigo);
+        return listo({
+          accion: "vista",
+          vista: "una",
+          ...(dato ? { capa: dato } : {}),
+          ...(c ? { comuna: c.codigo } : {}),
+          texto: c ? `Listo, te muestro solo ${c.tipo === "comuna" ? "la comuna" : "el corregimiento"} ${c.nombre}${conDato}.` : "Listo, elige una comuna en el mapa o dime cuál quieres ver.",
+        });
       }
       case "tema": {
         if (!a.tema) return falta("Dime si prefieres el tema claro o el oscuro.");

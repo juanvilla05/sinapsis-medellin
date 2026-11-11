@@ -5,11 +5,15 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type
 import { resumirEstaciones } from "@/lib/aire";
 import { emitir, escuchar } from "../bus";
 import { useTema } from "../tema";
-import type { CapaPulso, EventoPulso } from "../tipos";
+import type { CapaPulso, EventoPulso, VistaPulso } from "../tipos";
+import { resumirTablas, textoSuma, type RespuestaTablas } from "./fichas";
 import type { EstadoRecorrido, Motor } from "./motor";
+import { TarjetaComuna } from "./TarjetaComuna";
 import {
   CAPAS_REJILLA,
+  UNIDAD_CAPA,
   esCapaRejilla,
+  puntoEnGeometria,
   fechaCorta,
   fechaHoraBogota,
   horaBogota,
@@ -31,8 +35,10 @@ import {
   KpisAire,
   LeyendaAire,
   LeyendaComunas,
+  LeyendaComunasValor,
   LeyendaRejilla,
   PanelCapas,
+  SelectorVista,
   TarjetaDetalle,
   Tooltip,
   foco,
@@ -44,6 +50,8 @@ type MotivoError = "webgl" | "teselas" | "carga";
 type Fase = "inactivo" | "cargando" | "listo" | "error";
 
 const REFRESCO_AIRE_MS = 5 * 60_000;
+/** Centro y encuadre de la vista por comunas: más cenital, para leer los bloques. */
+const VISTA_COMUNAS = { lat: 6.2442, lng: -75.5736, inclinacion: 48, rumbo: 0 };
 const CAPAS_INICIALES: Record<CapaPulso, boolean> = { aire: true, incidentes: false, victimas: false, hurto: false, comunas: false };
 
 /** Descarga perezosa de un recurso JSON del repo; conserva el último dato bueno si una recarga falla. */
@@ -102,6 +110,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   const [estadoMapa, setEstadoMapa] = useState<"cargando" | "listo" | "error">("cargando");
   const [motivo, setMotivo] = useState<MotivoError>("carga");
   const [capas, setCapas] = useState(CAPAS_INICIALES);
+  const [vista, setVista] = useState<VistaPulso>("puntos");
   const [enFoco, setEnFoco] = useState<CapaPulso | null>("aire");
   const [sel, setSel] = useState<Seleccion>(null);
   const [pasada, setPasada] = useState<Pasada | null>(null);
@@ -113,6 +122,8 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   const aire = useRecurso<SnapshotSiataOk>("/api/siata");
   const rejillas = useRecurso<RespuestaRejillas>("/api/monitoreo/rejillas");
   const comunas = useRecurso<RespuestaComunas>("/api/monitoreo/comunas");
+  const tablas = useRecurso<RespuestaTablas>("/api/monitoreo/tablas");
+  const { asegurar: asegurarTablas, cargar: cargarTablas } = tablas;
   const cargarAire = aire.cargar;
   const { asegurar: asegurarRejillas, cargar: cargarRejillas } = rejillas;
   const { asegurar: asegurarComunas, cargar: cargarComunas } = comunas;
@@ -129,6 +140,18 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     [rejillas.datos],
   );
   const comunasMapa = useMemo(() => prepararComunas(comunas.datos), [comunas.datos]);
+  const resumenes = useMemo(() => resumirTablas(tablas.datos), [tablas.datos]);
+  /** el dato de MEData que está a la vista (solo uno a la vez) */
+  const dato = CAPAS_REJILLA.find((c) => capas[c]) ?? null;
+  const resumenDato = dato ? resumenes[dato] : null;
+  const valoresComuna = resumenDato?.porComuna ?? null;
+  const datoComuna = useCallback(
+    (codigo: string) => {
+      const f = dato && vista !== "puntos" ? valoresComuna?.get(codigo) : undefined;
+      return f && dato ? `${textoSuma(f.total)} ${UNIDAD_CAPA[dato][1]}` : null;
+    },
+    [dato, vista, valoresComuna],
+  );
 
   const objetoSel = useMemo<ObjetoMapa | null>(() => {
     if (!sel) return null;
@@ -167,6 +190,38 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     },
     [asegurarRejillas, asegurarComunas],
   );
+
+  const cambiarVista = useCallback(
+    (v: VistaPulso) => {
+      setVista(v);
+      if (v === "puntos") {
+        setComunaResaltada(null);
+        setSel((s) => (s?.tipo === "comuna" ? null : s));
+        return;
+      }
+      asegurarComunas();
+      asegurarTablas();
+      asegurarRejillas();
+      // sin un dato de MEData a la vista no hay nada que pintar por comuna: arranca con incidentes
+      setCapas((prev) => (CAPAS_REJILLA.some((c) => prev[c]) ? prev : { ...prev, incidentes: true }));
+      setEnFoco(dato ?? "incidentes");
+      setSel((s) => (s?.tipo === "celda" ? null : s));
+      if (v === "comunas") {
+        const cont = contRef.current;
+        motorRef.current?.volar({ ...VISTA_COMUNAS, zoom: cont && cont.clientWidth < 640 ? 10.5 : 11.3 });
+      }
+    },
+    [asegurarComunas, asegurarTablas, asegurarRejillas, dato],
+  );
+
+  /** Elegir una comuna desde el selector o la tarjeta: la resalta, abre su tarjeta y vuela a ella. */
+  const elegirComuna = (codigo: string) => {
+    setComunaResaltada(codigo);
+    setSel({ tipo: "comuna", codigo });
+    asegurarTablas();
+    vueloPendiente.current = { tipo: "comuna", codigo };
+    intentarVuelo();
+  };
 
   const reintentar = useCallback(
     (capa: CapaPulso) => {
@@ -214,6 +269,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         setComunaResaltada(e.codigo);
         if (e.codigo) {
           cambiarCapa("comunas", true);
+          asegurarTablas();
           setSel({ tipo: "comuna", codigo: e.codigo });
           vueloPendiente.current = { tipo: "comuna", codigo: e.codigo };
           intentarVuelo();
@@ -243,6 +299,9 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       case "capa":
         cambiarCapa(e.capa, e.visible);
         break;
+      case "vista":
+        cambiarVista(e.vista);
+        break;
       case "recorrido":
         if (motorRef.current && estadoMapa === "listo") motorRef.current.fijarRecorrido(e.activo);
         else recorridoPendiente.current = e.activo;
@@ -263,8 +322,10 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       setSel({ tipo: "celda", celda: o.celda });
       asegurarComunas();
     } else if (o.tipo === "comuna") {
+      if (vista === "una") return elegirComuna(o.codigo);
       setSel({ tipo: "comuna", codigo: o.codigo });
       setComunaResaltada(o.codigo);
+      asegurarTablas();
     } else emitir({ tipo: "elegir-ruta", id: o.ruta.id });
   });
 
@@ -336,8 +397,8 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   // React → motor
   useEffect(() => {
     if (estadoMapa !== "listo") return;
-    motorRef.current?.sincronizar({ capas, estaciones, rejillas: rejillasMapa, comunas: comunasMapa, comunaResaltada, seleccion: puntoSel, rutas });
-  }, [estadoMapa, capas, estaciones, rejillasMapa, comunasMapa, comunaResaltada, puntoSel, rutas]);
+    motorRef.current?.sincronizar({ capas, estaciones, rejillas: rejillasMapa, comunas: comunasMapa, comunaResaltada, vista, valoresComuna, seleccion: puntoSel, rutas });
+  }, [estadoMapa, capas, estaciones, rejillasMapa, comunasMapa, comunaResaltada, vista, valoresComuna, puntoSel, rutas]);
 
   /* ───────── aire: primera lectura y refresco cada 5 min ───────── */
   useEffect(() => {
@@ -390,26 +451,21 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     };
   }, [aire.datos, aire.fase, rejillasMapa, rejillas.fase, comunas.datos, comunas.fase]);
 
-  const leyendas = useMemo<Partial<Record<CapaPulso, ReactNode>>>(
-    () => ({
+  const leyendas = useMemo<Partial<Record<CapaPulso, ReactNode>>>(() => {
+    // por comunas la escala es la de las comunas; en las otras vistas, la de las celdas de 250 m
+    const deDato = (c: (typeof CAPAS_REJILLA)[number]) => {
+      const r = resumenes[c];
+      if (vista === "comunas") return r ? <LeyendaComunasValor minimo={r.minimo} maximo={r.maximo} /> : null;
+      return rejillasMapa[c] ? <LeyendaRejilla rejilla={rejillasMapa[c]} /> : null;
+    };
+    return {
       aire: <LeyendaAire estaciones={estaciones} />,
-      incidentes: rejillasMapa.incidentes ? <LeyendaRejilla rejilla={rejillasMapa.incidentes} /> : null,
-      victimas: rejillasMapa.victimas ? <LeyendaRejilla rejilla={rejillasMapa.victimas} /> : null,
-      hurto: rejillasMapa.hurto ? <LeyendaRejilla rejilla={rejillasMapa.hurto} /> : null,
+      incidentes: deDato("incidentes"),
+      victimas: deDato("victimas"),
+      hurto: deDato("hurto"),
       comunas: comunasMapa ? <LeyendaComunas /> : null,
-    }),
-    [estaciones, rejillasMapa, comunasMapa],
-  );
-  const leyendasCompactas = useMemo<Partial<Record<CapaPulso, ReactNode>>>(
-    () => ({
-      aire: <LeyendaAire estaciones={estaciones} compacta />,
-      incidentes: rejillasMapa.incidentes ? <LeyendaRejilla rejilla={rejillasMapa.incidentes} compacta /> : null,
-      victimas: rejillasMapa.victimas ? <LeyendaRejilla rejilla={rejillasMapa.victimas} compacta /> : null,
-      hurto: rejillasMapa.hurto ? <LeyendaRejilla rejilla={rejillasMapa.hurto} compacta /> : null,
-      comunas: comunasMapa ? <LeyendaComunas /> : null,
-    }),
-    [estaciones, rejillasMapa, comunasMapa],
-  );
+    };
+  }, [estaciones, rejillasMapa, comunasMapa, resumenes, vista]);
 
   const pildora = aire.datos
     ? aire.datos.guardado
@@ -427,7 +483,14 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     intentarVuelo();
   };
 
+  const comunaSel = objetoSel?.tipo === "comuna" ? (comunasMapa?.find((c) => c.codigo === objetoSel.codigo) ?? null) : null;
+  const estacionesComuna = useMemo(
+    () => (comunaSel && estaciones ? estaciones.filter((e) => e.pm25 !== null && puntoEnGeometria(e.lng, e.lat, comunaSel.feature.geometry)).sort((a, b) => (b.pm25 ?? 0) - (a.pm25 ?? 0)) : []),
+    [comunaSel, estaciones],
+  );
+
   const propsCapas = {
+    vista,
     capas,
     info,
     onCambiar: cambiarCapa,
@@ -488,7 +551,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       )}
 
       {/* KPIs del aire, debajo de la barra del shell */}
-      <div className="absolute inset-x-3 top-[72px] z-10 md:inset-x-auto md:left-4 md:top-[76px] md:w-[360px]">
+      <div className="absolute inset-x-3 top-[72px] z-10 flex flex-col gap-2 md:inset-x-auto md:left-4 md:top-[76px] md:w-[360px]">
         <KpisAire
           fase={aire.fase}
           resumen={resumen}
@@ -497,21 +560,41 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
           onPeor={verPeor}
           onReintentar={() => void cargarAire()}
         />
+        <SelectorVista vista={vista} onVista={cambiarVista} comunas={comunasMapa} comuna={comunaResaltada} onComuna={elegirComuna} />
       </div>
 
       {/* capas: panel abajo-izquierda en escritorio, chips abajo en móvil (deja libre la esquina del bot) */}
-      <div className="absolute bottom-8 left-4 z-10 hidden max-h-[calc(100dvh-250px)] w-[300px] md:flex">
+      <div className="absolute bottom-8 left-4 z-10 hidden max-h-[calc(100dvh-330px)] w-[300px] md:flex">
         <PanelCapas {...propsCapas} leyendas={leyendas} />
       </div>
       <div className="absolute bottom-3 left-3 right-3 z-10 md:hidden">
-        <ChipsCapas {...propsCapas} leyendas={leyendasCompactas} foco={enFoco} />
+        <ChipsCapas {...propsCapas} leyendas={leyendas} foco={enFoco} />
       </div>
 
-      {pasada && !objetoSel && <Tooltip pasada={pasada} rejillas={rejillasMapa} />}
+      {pasada && !objetoSel && <Tooltip pasada={pasada} rejillas={rejillasMapa} datoComuna={datoComuna} />}
 
       {objetoSel && (
-        <div className="absolute inset-x-3 bottom-[150px] z-10 max-h-[42dvh] overflow-y-auto rounded-2xl md:inset-x-auto md:bottom-8 md:left-[332px] md:max-h-[calc(100dvh-140px)] md:w-[320px]">
-          <TarjetaDetalle objeto={objetoSel} rejillas={rejillasMapa} comunas={comunasMapa} onCerrar={() => setSel(null)} onPreguntar={preguntar} />
+        <div className="absolute inset-x-3 bottom-[150px] z-10 max-h-[42dvh] overflow-y-auto rounded-2xl md:inset-x-auto md:bottom-8 md:left-[392px] md:max-h-[calc(100dvh-140px)] md:w-[320px]">
+          {comunaSel ? (
+            <TarjetaComuna
+              comuna={comunaSel}
+              dato={dato ?? "incidentes"}
+              resumenes={resumenes}
+              fase={tablas.fase}
+              estaciones={estacionesComuna}
+              vista={vista}
+              onDato={(c) => cambiarCapa(c, true)}
+              onVista={(v) => {
+                cambiarVista(v);
+                if (v === "una") elegirComuna(comunaSel.codigo);
+              }}
+              onReintentar={() => void cargarTablas()}
+              onCerrar={() => setSel(null)}
+              onPreguntar={preguntar}
+            />
+          ) : (
+            <TarjetaDetalle objeto={objetoSel} rejillas={rejillasMapa} comunas={comunasMapa} onCerrar={() => setSel(null)} onPreguntar={preguntar} />
+          )}
         </div>
       )}
     </div>

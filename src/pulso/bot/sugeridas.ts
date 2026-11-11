@@ -6,6 +6,7 @@ import type { Sugerida } from "@/lib/analista/sugeridas";
  */
 export const SUGERIDAS_BOT: Sugerida[] = [
   { texto: "¿Cómo está el aire en Medellín ahora?", herramienta: "consultarAire", args: { ambito: "medellin" } },
+  { texto: "Muéstrame Medellín por comunas", herramienta: "controlarApp", args: { accion: "vista", vista: "comunas" } },
   { texto: "¿Qué comunas tienen más incidentes viales?", herramienta: "consultarSeguridadVial", args: { tema: "incidentes" } },
   {
     texto: "¿Cuántas muertes viales hubo en 2023 según MEData y la Policía?",
