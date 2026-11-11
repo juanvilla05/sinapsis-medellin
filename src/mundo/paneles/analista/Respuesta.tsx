@@ -306,7 +306,7 @@ function CuerpoSeguridad({ d }: { d: SeguridadVialConsulta | MuertesPorAnioConsu
         ) : null}
         <p className="m-0 text-[13.5px] leading-relaxed text-[#0F172A]">{d.texto}</p>
         <div className="overflow-x-auto rounded-xl border border-[#E3EAF3]">
-          <table className="w-full min-w-[320px] border-collapse text-left text-[12.5px]">
+          <table className="w-full min-w-[280px] border-collapse text-left text-[12.5px]">
             <thead className="bg-[#F4F7FB] text-[11px] font-bold tracking-wide text-[#475569]">
               <tr>
                 <th className="px-3 py-2">AÑO</th>
