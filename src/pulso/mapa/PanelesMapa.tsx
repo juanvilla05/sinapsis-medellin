@@ -3,9 +3,11 @@
 import type { ReactNode } from "react";
 import type { ResumenAire } from "@/lib/aire";
 import { CATEGORIAS, ORDEN_CATEGORIAS, categoriaICA } from "@/lib/ica";
+import { ROTULO_FUENTE, ROTULO_TIPO } from "../camaras/constantes";
 import { useTema } from "../tema";
-import type { CapaPulso, VistaPulso } from "../tipos";
+import type { CapaPulso, TipoCamara, VistaPulso } from "../tipos";
 import {
+  COLOR_CAMARA,
   CORTO_CAPA,
   gradienteCss,
   NOMBRE_CAPA,
@@ -15,6 +17,7 @@ import {
   horaBogota,
   numero,
   periodoTexto,
+  type CamaraPulso,
   type ComunaMapa,
   type EstacionSiata,
   type ObjetoMapa,
@@ -143,6 +146,26 @@ export function LeyendaAire({ estaciones }: { estaciones: EstacionSiata[] | null
           {CATEGORIAS[c].corto}
         </li>
       ))}
+    </ul>
+  );
+}
+
+const TIPOS_CAMARA: TipoCamara[] = ["via", "agua", "panoramica"];
+
+/** Qué mira cada punto de la capa de cámaras y cuántas hay de cada clase. */
+export function LeyendaCamaras({ camaras }: { camaras: CamaraPulso[] | null }) {
+  return (
+    <ul className="flex flex-wrap gap-x-3 gap-y-1" aria-label="Cámaras públicas según lo que muestran">
+      {TIPOS_CAMARA.map((t) => {
+        const n = camaras?.filter((c) => c.tipo === t).length ?? 0;
+        return (
+          <li key={t} className="flex items-center gap-1.5 text-[12.5px] text-tinta/80">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_CAMARA[t] }} aria-hidden="true" />
+            {ROTULO_TIPO[t]}
+            {camaras && <span className="font-mono text-[11.5px] text-tinta/55">{n}</span>}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -280,7 +303,7 @@ export function SelectorVista({
 
 /* ───────── panel de capas (escritorio) y chips (móvil) ───────── */
 
-const CAPAS_ORDEN: CapaPulso[] = ["aire", "incidentes", "victimas", "hurto", "comunas"];
+const CAPAS_ORDEN: CapaPulso[] = ["aire", "camaras", "incidentes", "victimas", "hurto", "comunas"];
 
 /** Una sola línea bajo el nombre de la capa, y solo cuando dice algo útil (la fecha del dato o un problema). */
 function textoFase(i: InfoCapa, activa: boolean) {
@@ -457,6 +480,8 @@ function lineasObjeto(o: ObjetoMapa, rejillas: Partial<Record<string, RejillaMap
         ],
       };
     }
+    case "camara":
+      return { titulo: o.camara.nombre, lineas: [`Cámara en vivo · ${ROTULO_FUENTE[o.camara.fuente]}`, o.camara.direccion ?? ROTULO_TIPO[o.camara.tipo]] };
     case "celda": {
       const c = o.celda;
       const rej = rejillas[c.capa];
@@ -522,7 +547,8 @@ export function TarjetaDetalle({
   onCerrar,
   onPreguntar,
 }: {
-  objeto: ObjetoMapa;
+  /** las cámaras tienen su propia tarjeta (TarjetaCamara) */
+  objeto: Exclude<ObjetoMapa, { tipo: "camara" }>;
   rejillas: Partial<Record<string, RejillaMapa | null>>;
   comunas: ComunaMapa[] | null;
   onCerrar: () => void;

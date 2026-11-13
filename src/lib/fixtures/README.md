@@ -34,3 +34,17 @@ marca `guardado: true` + `capturado: "2026-11-09T01:05:00-05:00"`, y la interfaz
 Fuente: SIATA – Sistema de Alerta Temprana de Medellín y el Valle de Aburrá (Área Metropolitana
 del Valle de Aburrá), capas 602/603 del visor público. **Sin licencia publicada por SIATA; uso
 académico con atribución.**
+
+# Listado de cámaras (respaldo cuando una fuente no responde)
+
+`camaras.json` es el listado **ya normalizado** que devolvió `/api/camaras` el **2026-11-13 14:38 COT**:
+80 cámaras del circuito cerrado de la Secretaría de Movilidad (SIMM) y 23 de SIATA. Solo trae nombre,
+dirección, coordenadas y el enlace https a la última foto de cada una; **no contiene ninguna imagen**.
+
+`obtenerCamaras()` (`src/lib/camaras.ts`) consulta las dos fuentes en vivo; si una falla, toma de este
+archivo las cámaras de esa fuente y marca `guardado: true` con `capturado`. Las fotos siempre se piden
+en vivo desde el navegador, así que una cámara del listado guardado puede haber dejado de publicar.
+
+Fuentes: capa `CCTV_Movilidad` del servidor de mapas de la Alcaldía de Medellín y capas de cámaras del
+visor de SIATA (1071, 1072, 1069, 1073 y 299). **Sin licencia publicada por ninguna de las dos; uso
+académico con atribución.**

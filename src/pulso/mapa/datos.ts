@@ -1,14 +1,16 @@
 /**
  * Datos del mapa 3D de PULSO: tipos de las respuestas de las APIs del repo, preparación para deck.gl
  * y utilidades geográficas. Módulo puro (cliente): no importa MapLibre ni deck.gl.
- * Toda cifra viene de /api/siata (SIATA), /api/monitoreo/rejillas (MEData) y /api/monitoreo/comunas (GeoMedellín).
+ * Toda cifra viene de /api/siata (SIATA), /api/monitoreo/rejillas (MEData) y /api/monitoreo/comunas (GeoMedellín);
+ * las cámaras, de /api/camaras (Secretaría de Movilidad · SIMM y SIATA).
  */
 import type { EstacionSiata, SnapshotSiata, SnapshotSiataOk } from "@/lib/aire";
 import { CATEGORIAS, type ClaveCategoria } from "@/lib/ica";
 import type { CeldaRejillaVictimas, FuenteAgregado, RejillaHurto, RejillaIncidentes, RejillaVictimas, ResolucionRejilla } from "@/lib/monitoreo/esquemas";
-import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso } from "../tipos";
+import type { SnapshotCamaras } from "@/lib/camaras-fuentes";
+import type { CamaraPulso, CapaPulso, PuntoNombrado, RutaPulso, TemaPulso, TipoCamara } from "../tipos";
 
-export type { EstacionSiata, SnapshotSiata, SnapshotSiataOk };
+export type { CamaraPulso, EstacionSiata, SnapshotCamaras, SnapshotSiata, SnapshotSiataOk };
 
 export type Rgba = [number, number, number, number];
 export type CapaRejilla = "incidentes" | "victimas" | "hurto";
@@ -60,6 +62,7 @@ export async function pedirJson<T extends { ok: boolean }>(url: string, senal?: 
 
 export const NOMBRE_CAPA: Record<CapaPulso, string> = {
   aire: "Aire en vivo",
+  camaras: "Cámaras en vivo",
   incidentes: "Incidentes viales",
   victimas: "Víctimas viales",
   hurto: "Hurto a personas",
@@ -67,6 +70,7 @@ export const NOMBRE_CAPA: Record<CapaPulso, string> = {
 };
 export const CORTO_CAPA: Record<CapaPulso, string> = {
   aire: "Aire",
+  camaras: "Cámaras",
   incidentes: "Incidentes",
   victimas: "Víctimas",
   hurto: "Hurto",
@@ -129,6 +133,8 @@ export function hexARgba(hex: string, alfa = 255): Rgba {
 
 export const colorCategoria = (c: ClaveCategoria, alfa = 255) => hexARgba(CATEGORIAS[c].color, alfa);
 export const GRIS_FUERA: Rgba = [148, 163, 184, 110];
+/** Color del punto de cada cámara según lo que mira; distinto de las categorías del aire para no confundirlos. */
+export const COLOR_CAMARA: Record<TipoCamara, string> = { via: "#A78BFA", agua: "#22D3EE", panoramica: "#F472B6" };
 
 /**
  * Rampas secuenciales (sin rojo/verde: no califican territorios).
@@ -340,6 +346,7 @@ export const distanciaTexto = (m: number) => (m < 1000 ? `${Math.round(m)} m` : 
 
 export type ObjetoMapa =
   | { tipo: "estacion"; estacion: EstacionSiata }
+  | { tipo: "camara"; camara: CamaraPulso }
   | { tipo: "celda"; celda: CeldaMapa }
   | { tipo: "comuna"; codigo: string; nombre: string }
   | { tipo: "ruta"; ruta: RutaPulso };

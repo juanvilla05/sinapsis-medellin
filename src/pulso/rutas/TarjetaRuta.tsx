@@ -56,6 +56,12 @@ export default function TarjetaRuta({ ruta, elegida, onElegir }: { ruta: RutaPul
         </span>
       </span>
 
+      {!elegida && ruta.camaras && ruta.camaras.length > 0 && (
+        <span className="mt-2 block text-[11.5px] text-tinta/60">
+          {ruta.camaras.length === 1 ? "1 cámara en vivo" : `${ruta.camaras.length} cámaras en vivo`} en el trayecto · elige la ruta para verlas
+        </span>
+      )}
+
       <span className="mt-2.5 block h-1.5 overflow-hidden rounded-full bg-tinta/10" aria-hidden="true">
         <span className="block h-full rounded-full" style={{ width: `${Math.max(4, ruta.puntaje)}%`, background: ruta.color }} />
       </span>

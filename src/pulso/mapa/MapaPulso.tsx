@@ -8,6 +8,7 @@ import { useTema } from "../tema";
 import type { CapaPulso, EventoPulso, VistaPulso } from "../tipos";
 import { resumirTablas, textoSuma, type RespuestaTablas } from "./fichas";
 import type { EstadoRecorrido, Motor } from "./motor";
+import { TarjetaCamara } from "./TarjetaCamara";
 import { TarjetaComuna } from "./TarjetaComuna";
 import {
   CAPAS_REJILLA,
@@ -27,6 +28,7 @@ import {
   type RespuestaComunas,
   type RespuestaRejillas,
   type RutasMapa,
+  type SnapshotCamaras,
   type SnapshotSiataOk,
 } from "./datos";
 import {
@@ -34,6 +36,7 @@ import {
   Girador,
   KpisAire,
   LeyendaAire,
+  LeyendaCamaras,
   LeyendaComunas,
   LeyendaComunasValor,
   LeyendaRejilla,
@@ -52,7 +55,7 @@ type Fase = "inactivo" | "cargando" | "listo" | "error";
 const REFRESCO_AIRE_MS = 5 * 60_000;
 /** Centro y encuadre de la vista por comunas: más cenital, para leer los bloques. */
 const VISTA_COMUNAS = { lat: 6.2442, lng: -75.5736, inclinacion: 48, rumbo: 0 };
-const CAPAS_INICIALES: Record<CapaPulso, boolean> = { aire: true, incidentes: false, victimas: false, hurto: false, comunas: false };
+const CAPAS_INICIALES: Record<CapaPulso, boolean> = { aire: true, camaras: false, incidentes: false, victimas: false, hurto: false, comunas: false };
 
 /** Descarga perezosa de un recurso JSON del repo; conserva el último dato bueno si una recarga falla. */
 function useRecurso<T extends { ok: boolean }>(url: string) {
@@ -79,8 +82,8 @@ function useRecurso<T extends { ok: boolean }>(url: string) {
   return { ...estado, cargar, asegurar };
 }
 
-type Seleccion = { tipo: "estacion"; codigo: number } | { tipo: "celda"; celda: CeldaMapa } | { tipo: "comuna"; codigo: string } | null;
-type Vuelo = { tipo: "estacion"; codigo: number } | { tipo: "comuna"; codigo: string } | null;
+type Seleccion = { tipo: "estacion"; codigo: number } | { tipo: "camara"; id: string } | { tipo: "celda"; celda: CeldaMapa } | { tipo: "comuna"; codigo: string } | null;
+type Vuelo = { tipo: "estacion"; codigo: number } | { tipo: "camara"; id: string } | { tipo: "comuna"; codigo: string } | null;
 
 const TEXTO_ERROR: Record<MotivoError, string> = {
   webgl: "Este navegador o dispositivo no tiene WebGL activo, que es lo que dibuja la ciudad en 3D.",
@@ -123,6 +126,8 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   const rejillas = useRecurso<RespuestaRejillas>("/api/monitoreo/rejillas");
   const comunas = useRecurso<RespuestaComunas>("/api/monitoreo/comunas");
   const tablas = useRecurso<RespuestaTablas>("/api/monitoreo/tablas");
+  const listadoCamaras = useRecurso<SnapshotCamaras>("/api/camaras");
+  const { asegurar: asegurarCamaras, cargar: cargarCamaras } = listadoCamaras;
   const { asegurar: asegurarTablas, cargar: cargarTablas } = tablas;
   const cargarAire = aire.cargar;
   const { asegurar: asegurarRejillas, cargar: cargarRejillas } = rejillas;
@@ -130,6 +135,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
 
   /* ───────── datos derivados ───────── */
   const estaciones = aire.datos?.estaciones ?? null;
+  const camaras = listadoCamaras.datos?.camaras ?? null;
   const resumen = useMemo(() => (estaciones ? resumirEstaciones(estaciones.filter((e) => e.enMedellin)) : null), [estaciones]);
   const rejillasMapa = useMemo(
     () => ({
@@ -160,13 +166,18 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       const e = estaciones?.find((x) => x.codigo === sel.codigo);
       return e ? { tipo: "estacion", estacion: e } : null;
     }
+    if (sel.tipo === "camara") {
+      const camara = camaras?.find((x) => x.id === sel.id);
+      return camara ? { tipo: "camara", camara } : null;
+    }
     const c = comunasMapa?.find((x) => x.codigo === sel.codigo);
     return c ? { tipo: "comuna", codigo: c.codigo, nombre: c.nombre } : null;
-  }, [sel, estaciones, comunasMapa]);
+  }, [sel, estaciones, camaras, comunasMapa]);
 
   const puntoSel = useMemo(() => {
     if (objetoSel?.tipo === "estacion") return { lng: objetoSel.estacion.lng, lat: objetoSel.estacion.lat };
     if (objetoSel?.tipo === "celda") return { lng: objetoSel.celda.lng, lat: objetoSel.celda.lat };
+    if (objetoSel?.tipo === "camara") return { lng: objetoSel.camara.lng, lat: objetoSel.camara.lat };
     return null;
   }, [objetoSel]);
 
@@ -182,13 +193,16 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         setEnFoco(capa);
         if (esCapaRejilla(capa)) asegurarRejillas();
         if (capa === "comunas") asegurarComunas();
+        if (capa === "camaras") asegurarCamaras();
       } else {
         setEnFoco((f) => (f === capa ? null : f));
-        setSel((s) => (s?.tipo === "celda" && s.celda.capa === capa ? null : s?.tipo === "comuna" && capa === "comunas" ? null : s));
+        setSel((s) =>
+          s?.tipo === "celda" && s.celda.capa === capa ? null : s?.tipo === "comuna" && capa === "comunas" ? null : s?.tipo === "camara" && capa === "camaras" ? null : s,
+        );
         if (capa === "comunas") setComunaResaltada(null);
       }
     },
-    [asegurarRejillas, asegurarComunas],
+    [asegurarRejillas, asegurarComunas, asegurarCamaras],
   );
 
   const cambiarVista = useCallback(
@@ -234,10 +248,11 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   const reintentar = useCallback(
     (capa: CapaPulso) => {
       if (capa === "aire") void cargarAire();
+      else if (capa === "camaras") void cargarCamaras();
       else if (capa === "comunas") void cargarComunas();
       else void cargarRejillas();
     },
-    [cargarAire, cargarComunas, cargarRejillas],
+    [cargarAire, cargarCamaras, cargarComunas, cargarRejillas],
   );
 
   const preguntar = useCallback((texto: string) => {
@@ -254,6 +269,10 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       const e = estaciones?.find((x) => x.codigo === p.codigo);
       if (!e) return;
       m.volar({ lat: e.lat, lng: e.lng, zoom: 14.2, inclinacion: 58 }, true);
+    } else if (p.tipo === "camara") {
+      const camara = camaras?.find((x) => x.id === p.id);
+      if (!camara) return;
+      m.volar({ lat: camara.lat, lng: camara.lng, zoom: 15, inclinacion: 50 }, true);
     } else {
       const c = comunasMapa?.find((x) => x.codigo === p.codigo);
       if (!c) return;
@@ -264,7 +283,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   const resolverVuelo = useEffectEvent(() => intentarVuelo());
   useEffect(() => {
     resolverVuelo();
-  }, [estaciones, comunasMapa, estadoMapa]);
+  }, [estaciones, camaras, comunasMapa, estadoMapa]);
 
   /* ───────── bus ───────── */
   const alEvento = useEffectEvent((e: EventoPulso) => {
@@ -290,6 +309,18 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
           if (!capas.aire) cambiarCapa("aire", true);
           setSel({ tipo: "estacion", codigo: e.codigo });
           vueloPendiente.current = { tipo: "estacion", codigo: e.codigo };
+          intentarVuelo();
+        }
+        break;
+      case "camara":
+        if (e.id === null) {
+          setSel((s) => (s?.tipo === "camara" ? null : s));
+        } else {
+          // por comunas la capa de cámaras no se dibuja: vuelve a los puntos
+          if (vista === "comunas") cambiarVista("puntos");
+          cambiarCapa("camaras", true);
+          setSel({ tipo: "camara", id: e.id });
+          vueloPendiente.current = { tipo: "camara", id: e.id };
           intentarVuelo();
         }
         break;
@@ -325,6 +356,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   const alTocar = useEffectEvent((o: ObjetoMapa | null) => {
     if (!o) return setSel(null);
     if (o.tipo === "estacion") setSel({ tipo: "estacion", codigo: o.estacion.codigo });
+    else if (o.tipo === "camara") setSel({ tipo: "camara", id: o.camara.id });
     else if (o.tipo === "celda") {
       setSel({ tipo: "celda", celda: o.celda });
       asegurarComunas();
@@ -404,8 +436,8 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
   // React → motor
   useEffect(() => {
     if (estadoMapa !== "listo") return;
-    motorRef.current?.sincronizar({ capas, estaciones, rejillas: rejillasMapa, comunas: comunasMapa, comunaResaltada, vista, valoresComuna, seleccion: puntoSel, rutas });
-  }, [estadoMapa, capas, estaciones, rejillasMapa, comunasMapa, comunaResaltada, vista, valoresComuna, puntoSel, rutas]);
+    motorRef.current?.sincronizar({ capas, estaciones, camaras, rejillas: rejillasMapa, comunas: comunasMapa, comunaResaltada, vista, valoresComuna, seleccion: puntoSel, rutas });
+  }, [estadoMapa, capas, estaciones, camaras, rejillasMapa, comunasMapa, comunaResaltada, vista, valoresComuna, puntoSel, rutas]);
 
   /* ───────── aire: primera lectura y refresco cada 5 min ───────── */
   useEffect(() => {
@@ -445,8 +477,14 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
       };
     };
     const com = comunas.datos;
+    const cam = listadoCamaras.datos;
     return {
       aire: { fase: aire.fase === "listo" && !snap?.estaciones.length ? "vacio" : aire.fase, fuente: "SIATA", corte: corteAire },
+      camaras: {
+        fase: listadoCamaras.fase === "listo" && !cam?.camaras.length ? "vacio" : listadoCamaras.fase,
+        fuente: "Secretaría de Movilidad · SIATA",
+        corte: cam ? (cam.guardado ? `listado guardado del ${fechaHoraBogota(cam.capturado) ?? "—"}` : `${cam.camaras.length} cámaras · foto de cada minuto`) : null,
+      },
       incidentes: fRej("incidentes"),
       victimas: fRej("victimas"),
       hurto: fRej("hurto"),
@@ -456,7 +494,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         corte: com ? (com.guardado ? `copia guardada del ${fechaHoraBogota(com.capturado) ?? "—"}` : `consultado ${horaBogota(com.consultado) ?? "—"}`) : null,
       },
     };
-  }, [aire.datos, aire.fase, rejillasMapa, rejillas.fase, comunas.datos, comunas.fase]);
+  }, [aire.datos, aire.fase, listadoCamaras.datos, listadoCamaras.fase, rejillasMapa, rejillas.fase, comunas.datos, comunas.fase]);
 
   const leyendas = useMemo<Partial<Record<CapaPulso, ReactNode>>>(() => {
     // por comunas la escala es la de las comunas; en las otras vistas, la de las celdas de 250 m
@@ -467,12 +505,13 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
     };
     return {
       aire: <LeyendaAire estaciones={estaciones} />,
+      camaras: <LeyendaCamaras camaras={camaras} />,
       incidentes: deDato("incidentes"),
       victimas: deDato("victimas"),
       hurto: deDato("hurto"),
       comunas: comunasMapa ? <LeyendaComunas /> : null,
     };
-  }, [estaciones, rejillasMapa, comunasMapa, resumenes, vista]);
+  }, [estaciones, camaras, rejillasMapa, comunasMapa, resumenes, vista]);
 
   const pildora = aire.datos
     ? aire.datos.guardado
@@ -516,7 +555,7 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
         <div
           ref={contRef}
           className="h-full w-full bg-fondo [&_.maplibregl-canvas:focus-visible]:outline-2 [&_.maplibregl-canvas:focus-visible]:outline-offset-[-4px] [&_.maplibregl-canvas:focus-visible]:outline-[#7DD3FC] [&_.maplibregl-canvas]:outline-none"
-          aria-label="Mapa 3D de Medellín: aire de SIATA, seguridad vial y hurto de MEData, comunas oficiales"
+          aria-label="Mapa 3D de Medellín: aire de SIATA, cámaras públicas en vivo, seguridad vial y hurto de MEData, comunas oficiales"
           role="region"
         />
       </div>
@@ -599,6 +638,8 @@ export default function MapaPulso({ className = "" }: { className?: string }) {
               onCerrar={() => setSel(null)}
               onPreguntar={preguntar}
             />
+          ) : objetoSel.tipo === "camara" ? (
+            <TarjetaCamara key={objetoSel.camara.id} camara={objetoSel.camara} onCerrar={() => setSel(null)} />
           ) : (
             <TarjetaDetalle objeto={objetoSel} rejillas={rejillasMapa} comunas={comunasMapa} onCerrar={() => setSel(null)} onPreguntar={preguntar} />
           )}
