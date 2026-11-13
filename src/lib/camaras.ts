@@ -4,7 +4,7 @@ import type { CamaraPulso, FuenteCamara } from "@/pulso/tipos";
 import {
   FUENTES_CAMARAS,
   SIATA_CAPAS_CAMARAS,
-  SIMM_LISTADO,
+  SIMM_LISTADOS,
   normalizarSiata,
   normalizarSimm,
   type SnapshotCamaras,
@@ -26,12 +26,26 @@ const TIEMPO_FOTO_MS = 6_000;
 /** Una foto de SIATA con más de esto sin renovarse ya no es "en vivo" y se descarta. */
 const MAX_EDAD_FOTO_MS = 45 * 60_000;
 
-async function consultarSimm(): Promise<CamaraPulso[]> {
-  const res = await fetch(SIMM_LISTADO, { signal: AbortSignal.timeout(TIEMPO_LISTADO_MS) });
+async function consultarListadoSimm(url: string): Promise<CamaraPulso[]> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(TIEMPO_LISTADO_MS) });
   if (!res.ok) throw new Error(`SIMM → HTTP ${res.status}`);
+  // cuando la consulta falla, ArcGIS responde 200 con {"error": …}: normalizarSimm lo rechaza por su forma
   const camaras = normalizarSimm(await res.json());
   if (camaras.length === 0) throw new Error("SIMM → listado sin cámaras");
   return camaras;
+}
+
+/** Prueba los servicios que publican la capa, en orden, y se queda con el primero que entregue el listado. */
+async function consultarSimm(): Promise<CamaraPulso[]> {
+  let ultimo: unknown = new Error("SIMM → sin servicios configurados");
+  for (const url of SIMM_LISTADOS) {
+    try {
+      return await consultarListadoSimm(url);
+    } catch (e) {
+      ultimo = e;
+    }
+  }
+  throw ultimo;
 }
 
 async function consultarCapaSiata(id: string): Promise<unknown> {

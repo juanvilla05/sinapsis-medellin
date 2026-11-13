@@ -73,9 +73,18 @@ export const claveNombre = (s: string) =>
 
 /* ───────────────────────── SIMM ───────────────────────── */
 
-export const SIMM_LISTADO =
-  "https://www.medellin.gov.co/servidormapas/rest/services/transporte/VC_Infraest_Gestion_Transito/MapServer/2/query" +
-  "?where=1%3D1&outFields=direccion,localizacion,link_foto,latitud,longitud&returnGeometry=false&f=json";
+const CONSULTA_SIMM = "/query?where=1%3D1&outFields=direccion,localizacion,link_foto,latitud,longitud&returnGeometry=false&f=json";
+const SERVIDOR_MAPAS = "https://www.medellin.gov.co/servidormapas/rest/services";
+
+/**
+ * La misma capa `CCTV_Movilidad` está publicada en dos servicios del servidor de mapas. Se consultan en este orden:
+ * el 13 de noviembre de 2026 el de transporte respondió "Failed to execute query" durante un rato mientras el de
+ * seguridad seguía entregando el listado completo.
+ */
+export const SIMM_LISTADOS = [
+  `${SERVIDOR_MAPAS}/transporte/VC_Infraest_Gestion_Transito/MapServer/2${CONSULTA_SIMM}`,
+  `${SERVIDOR_MAPAS}/seguridad_defensa/VM_Policia_MAP5/MapServer/7${CONSULTA_SIMM}`,
+];
 
 export const fotoSimm = (n: number) => `https://www.medellin.gov.co/SIMM/camaras-cctv/imagen${n}.jpg`;
 

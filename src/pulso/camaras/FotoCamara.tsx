@@ -38,7 +38,7 @@ export function FotoCamara({
   const url = `${foto}?t=${minuto}`;
   const [fallida, setFallida] = useState<string | null>(null);
   return (
-    <span className={`relative block aspect-video overflow-hidden bg-black/40 ${className}`}>
+    <span className={`relative block aspect-video overflow-hidden bg-[#0B1220] ${className}`}>
       {fallida === url ? (
         <span role="img" aria-label={`${alt}: sin imagen en este momento`} className="grid h-full w-full place-items-center px-3 text-center text-[12px] leading-snug text-white/75">
           Sin imagen en este momento
