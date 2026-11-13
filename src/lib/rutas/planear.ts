@@ -1,11 +1,14 @@
 import "server-only";
 
 import type { Cita, Respuesta } from "@/lib/analista/herramientas";
+import { obtenerCamaras } from "@/lib/camaras";
+import { FUENTES_CAMARAS } from "@/lib/camaras-fuentes";
 import { cargarRejillaIncidentes } from "@/lib/monitoreo/cargar";
 import { obtenerAire } from "@/lib/siata";
 import { esFechaSoloDia, fechaColombia } from "@/mundo/areas";
 import { dentroDelValle, MODO_EN_FRASE, type ModoRuta } from "@/pulso/rutas/constantes";
 import type { PuntoNombrado, RutaPulso } from "@/pulso/tipos";
+import { camarasEnRuta } from "./camaras";
 import { buscarLugarPorTexto, calcularRutas, detallesLugar, type MotivoGoogle, type RutaCruda } from "./google";
 import { haversine } from "./polilinea";
 import { puntuarRutas, type EstacionPm25, type RejillaIndexada } from "./puntuar";
@@ -132,7 +135,7 @@ export async function planearRuta(entrada: EntradaPlanear): Promise<Respuesta<Da
     return { ok: false, motivo: "sin-datos", detalle: "El origen y el destino son el mismo lugar. Elige un destino distinto." };
   }
 
-  const [google, aire] = await Promise.all([rutasDeGoogle(o.punto, d.punto, modo), obtenerAire()]);
+  const [google, aire, listado] = await Promise.all([rutasDeGoogle(o.punto, d.punto, modo), obtenerAire(), obtenerCamaras()]);
   if (!google.ok) {
     if (google.motivo === "sin-clave") return { ok: false, motivo: "sin-clave", detalle: TEXTO_SIN_CLAVE };
     if (google.motivo === "sin-resultados")
@@ -150,7 +153,15 @@ export async function planearRuta(entrada: EntradaPlanear): Promise<Respuesta<Da
   }
 
   const rejilla = indexarRejilla();
-  const rutas = puntuarRutas(google.datos, modo, estaciones, rejilla.valor);
+  // Las cámaras no entran al puntaje: solo acompañan a cada alternativa con la foto del momento.
+  const rutas = puntuarRutas(google.datos, modo, estaciones, rejilla.valor).map((r) => {
+    const camaras = camarasEnRuta(
+      r.puntos.map(([lng, lat]) => ({ lat, lng })),
+      listado.camaras,
+    );
+    return camaras.length > 0 ? { ...r, camaras } : r;
+  });
+  const hayCamaras = rutas.some((r) => r.camaras);
   const consultado = new Date().toISOString();
 
   const citas: Cita[] = [];
@@ -173,6 +184,17 @@ export async function planearRuta(entrada: EntradaPlanear): Promise<Respuesta<Da
       fechaCorte: rejilla.corte,
     });
   }
+  if (hayCamaras) {
+    for (const f of listado.fuentes.filter((x) => x.camaras > 0)) {
+      citas.push({
+        conjunto: `Cámaras públicas · ${f.nombre}`,
+        campo: "última foto de las cámaras de vía a menos de 150 m de la ruta (no entra al puntaje)",
+        url: FUENTES_CAMARAS[f.clave].url,
+        licencia: f.licencia,
+        fechaCorte: listado.consultado,
+      });
+    }
+  }
   citas.push({
     conjunto: "Google Routes (solo geometría y tiempos)",
     campo: "trazado, distancia y duración de cada alternativa",
@@ -190,6 +212,7 @@ export async function planearRuta(entrada: EntradaPlanear): Promise<Respuesta<Da
       ? `Los incidentes son históricos (MEData, hasta ${rejilla.corte ? fechaLegible(rejilla.corte) : "el corte del conjunto"}), no tráfico actual; solo cubren Medellín.`
       : "La rejilla de incidentes viales está en preparación: el puntaje no incluye la siniestralidad.",
     "Puntaje 0–100: 45 % aire, 35 % incidentes históricos y 20 % tiempo, comparado entre las alternativas.",
+    hayCamaras ? "Las cámaras de vía muestran la foto del último minuto sobre cada trayecto; son evidencia visual y no cambian el puntaje." : null,
   ]
     .filter(Boolean)
     .join(" ");

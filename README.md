@@ -28,7 +28,8 @@ Equipo PULSO Medellín · Ingeniería en Ciencias de Datos, Institución Univers
 La portada es un **mapa 3D de Medellín** (MapLibre + deck.gl sobre OpenFreeMap, sin claves): faros de SIATA con el PM2.5 en vivo, columnas de 250 m de incidentes, víctimas y hurto de MEData, y comunas oficiales. Encima flotan:
 
 - **Tres vistas del mismo dato** (selector bajo el aire): *Puntos* (columnas de 250 m), *Comunas* (toda la ciudad por comunas, sin columnas: color y altura según el total de la comuna) y *Una comuna* (solo la elegida, con sus columnas). La tarjeta de comuna trae el total, su parte de la ciudad, la serie por año, el desglose y el aire de SIATA. Totales desde las tablas por comuna de MEData, con conteos de 1 a 4 suprimidos (`src/pulso/mapa/fichas.ts`).
-- **Rutas inteligentes**: Google Routes calcula las alternativas y PULSO las compara por aire (SIATA) y siniestralidad histórica (MEData).
+- **Cámaras en vivo** (capa «Cámaras en vivo»): un punto por cada cámara pública con foto reciente, unas 100 entre el circuito cerrado de la Secretaría de Movilidad (SIMM) y las cámaras de SIATA (deprimidos viales, río y quebradas, panorámicas). Al tocarla se ve su última foto, que se renueva cada minuto.
+- **Rutas inteligentes**: Google Routes calcula las alternativas y PULSO las compara por aire (SIATA) y siniestralidad histórica (MEData). La ruta elegida muestra «Así está ahora»: hasta tres cámaras de vía a menos de 150 m del trayecto. Las fotos no entran al puntaje.
 - **PulsoBot**: el asistente, disponible 24/7. Se le escribe o se conversa con él por voz de corrido; responde con la cifra y su fuente, mueve el mapa (vuela a la estación, resalta la comuna, dibuja la ruta) y maneja la plataforma (capas, vistas, tema, recorrido, secciones): "muéstrame Medellín por comunas", "muéstrame solo Belén con los hurtos". Sin IA entiende las preguntas con un intérprete propio.
 
 ## La Agencia de datos (`/alpujarra`)
@@ -91,6 +92,7 @@ src/lib/ventanilla.ts    reglas de la Ventanilla de Apertura (propuestas por con
 src/agencia/             Agencia de datos: oficina isométrica 2D, personajes y barra lateral
 src/mundo/paneles/       herramientas de cada despacho (Reloj, Laboratorio, Ventanilla, Analista, Monitoreo)
 src/pulso/               la Ciudad: mapa en vivo, rutas y PulsoBot
+src/lib/camaras.ts       cámaras públicas en vivo: listado de SIMM y SIATA (camaras-fuentes.ts lo normaliza)
 scripts/pipeline.ts      pipeline automático
 src/data/                resultados guardados del pipeline
 ```
@@ -101,6 +103,9 @@ src/data/                resultados guardados del pipeline
 - **datos.gov.co**: Homicidios en accidente de tránsito de la Policía Nacional (`ha6j-pa2r`), filtrado a Medellín, CC BY-SA 4.0.
 - **SIATA**: PM2.5 por estación (capas 602 y 603 del visor), licencia no declarada por la fuente.
 - **Datos Abiertos del Distrito (GeoMedellín)**: comunas y corregimientos, licencia no declarada por la fuente.
+- **Secretaría de Movilidad de Medellín · SIMM**: cámaras del circuito cerrado de televisión. El listado sale de la capa `CCTV_Movilidad` del servidor de mapas de la Alcaldía (`https://www.medellin.gov.co/servidormapas/rest/services/transporte/VC_Infraest_Gestion_Transito/MapServer/2`) y la foto de cada cámara de `https://www.medellin.gov.co/SIMM/camaras-cctv/`. Licencia no declarada por la fuente; se usa con atribución.
+- **SIATA · cámaras**: capas de cámaras del visor (deprimidos, nivel, color, capa límite y panorámicas), con la foto en `https://siata.gov.co/ultimasFotosCamaras/`. Solo se muestran las que se renovaron en los últimos 45 minutos. Licencia no declarada por la fuente; se usa con atribución.
+- De las cámaras PULSO solo guarda el listado (nombre, lugar y enlace): cada foto la pide el navegador directamente a la fuente, no pasa por el servidor de PULSO y no se almacena. Si una fuente no responde, se usa el listado guardado con su fecha (`src/lib/fixtures/camaras.json`).
 - La Sala de Monitoreo publica solo agregados: celdas de 250 m con 5 casos o más, conteos de 1 a 4 suprimidos y supresión complementaria para que no se puedan recuperar restando (`src/lib/monitoreo/datos/README.md`). Si una fuente no responde, se muestra la copia guardada con su fecha.
 - No se almacenan ni se publican datos personales: el Laboratorio procesa muestras en memoria y solo devuelve diagnósticos y unas pocas filas de ejemplo. Las columnas con datos personales o cuasi-identificadores (nombre, documento, placa, teléfono, sexo, edad, dirección, coordenadas…) se detectan por token del encabezado, salen como "•••" en el ejemplo y fuera del CSV descargable; las horas se redondean a la hora en punto (se conservan fecha y barrio).
 

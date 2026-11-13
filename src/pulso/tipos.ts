@@ -7,12 +7,38 @@
 export type TemaPulso = "oscuro" | "claro";
 
 /** Capas de datos del mapa 3D. */
-export type CapaPulso = "aire" | "incidentes" | "victimas" | "hurto" | "comunas";
+export type CapaPulso = "aire" | "camaras" | "incidentes" | "victimas" | "hurto" | "comunas";
 
 /** Cómo se pinta el dato: columnas de 250 m, comunas coloreadas o una sola comuna aislada. */
 export type VistaPulso = "puntos" | "comunas" | "una";
 
 export type BandaRuta = "buena" | "aceptable" | "danina" | "sin-dato";
+
+/** De dónde sale la foto: circuito cerrado de la Secretaría de Movilidad (SIMM) o cámaras de SIATA. */
+export type FuenteCamara = "simm" | "siata";
+/** Qué mira la cámara: una vía, el río o una quebrada, o la ciudad y el cielo desde lo alto. */
+export type TipoCamara = "via" | "agua" | "panoramica";
+
+/** Una cámara pública con su última foto. PULSO no guarda ninguna imagen: `fotos` apunta a la fuente. */
+export interface CamaraPulso {
+  /** estable entre consultas: "simm-27", "siata-dep_bulerias" */
+  id: string;
+  fuente: FuenteCamara;
+  tipo: TipoCamara;
+  nombre: string;
+  direccion: string | null;
+  lat: number;
+  lng: number;
+  /** URL https de la última foto de cada vista del punto (casi siempre una) */
+  fotos: string[];
+}
+
+/** Cámara de vía a menos de 150 m de una ruta, en el orden en que se recorre. */
+export interface CamaraEnRuta {
+  id: string;
+  nombre: string;
+  foto: string;
+}
 
 /** Una alternativa de ruta ya puntuada con datos de SIATA y MEData (la geometría viene de Google Routes). */
 export interface RutaPulso {
@@ -34,6 +60,8 @@ export interface RutaPulso {
   /** color de dibujo (#hex) según la banda */
   color: string;
   recomendada: boolean;
+  /** cámaras de vía sobre el trayecto (máximo 3, repartidas de inicio a fin); no entran al puntaje */
+  camaras?: CamaraEnRuta[];
 }
 
 export interface PuntoNombrado {
@@ -47,6 +75,7 @@ export type EventoPulso =
   | { tipo: "volar"; lat: number; lng: number; zoom?: number; inclinacion?: number; rumbo?: number }
   | { tipo: "comuna"; codigo: string | null }
   | { tipo: "estacion"; codigo: number | null }
+  | { tipo: "camara"; id: string | null }
   | { tipo: "rutas"; rutas: RutaPulso[]; origen: PuntoNombrado; destino: PuntoNombrado; elegida?: string }
   | { tipo: "elegir-ruta"; id: string }
   | { tipo: "limpiar-rutas" }

@@ -12,11 +12,13 @@ import type { CapaPulso, PuntoNombrado, RutaPulso, TemaPulso, VistaPulso } from 
 import { estiloPulso, URL_ESTILO_BASE } from "./estilo";
 import {
   acumulado,
+  COLOR_CAMARA,
   colorCategoria,
   colorRampa,
   GRIS_FUERA,
   hexARgba,
   puntoEnGeometria,
+  type CamaraPulso,
   type CapaRejilla,
   type CeldaMapa,
   type ComunaMapa,
@@ -117,6 +119,7 @@ export class FalloMapa extends Error {
 export interface EstadoMotor {
   capas: Record<CapaPulso, boolean>;
   estaciones: EstacionSiata[] | null;
+  camaras: CamaraPulso[] | null;
   rejillas: Partial<Record<CapaRejilla, RejillaMapa | null>>;
   comunas: ComunaMapa[] | null;
   comunaResaltada: string | null;
@@ -227,8 +230,9 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
 
   /* ───────── estado ───────── */
   const st: EstadoMotor = {
-    capas: { aire: true, incidentes: false, victimas: false, hurto: false, comunas: false },
+    capas: { aire: true, camaras: false, incidentes: false, victimas: false, hurto: false, comunas: false },
     estaciones: null,
+    camaras: null,
     rejillas: {},
     comunas: null,
     comunaResaltada: null,
@@ -307,6 +311,7 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
     const o = info.object as unknown;
     if (!o) return null;
     if (id === "aire-faros" || id === "aire-base") return { tipo: "estacion", estacion: o as EstacionSiata };
+    if (id === "camaras") return { tipo: "camara", camara: o as CamaraPulso };
     if (id.startsWith("rejilla-")) return { tipo: "celda", celda: o as CeldaMapa };
     if (id === "comunas") {
       const f = o as FeatureComuna;
@@ -700,6 +705,30 @@ export async function crearMotor(op: OpcionesMotor): Promise<Motor> {
           updateTriggers: { getFillColor: claveSel },
           parameters: sel ? { depthWriteEnabled: false } : {},
           material: { ambient: 0.6, diffuse: 0.5, shininess: 40, specularColor: [255, 255, 255] },
+        }),
+      );
+    }
+
+    // cámaras públicas (SIMM y SIATA): un punto por cámara; la foto se ve en la tarjeta
+    if (st.capas.camaras && st.camaras && !porComunas) {
+      const aisladaCam = unaComuna && st.comunaResaltada ? st.comunas?.find((c) => c.codigo === st.comunaResaltada) : undefined;
+      const camaras = aisladaCam ? st.camaras.filter((c) => puntoEnGeometria(c.lng, c.lat, aisladaCam.feature.geometry)) : st.camaras;
+      capas.push(
+        new ScatterplotLayer<CamaraPulso>({
+          id: "camaras",
+          data: camaras,
+          pickable: true,
+          getPosition: (c) => [c.lng, c.lat],
+          getRadius: 60,
+          radiusUnits: "meters",
+          radiusMinPixels: 5,
+          radiusMaxPixels: 13,
+          stroked: true,
+          getFillColor: (c) => hexARgba(COLOR_CAMARA[c.tipo], 245),
+          getLineColor: P.bordeExtremo,
+          lineWidthMinPixels: 1.5,
+          updateTriggers: { getLineColor: tema },
+          parameters: { depthCompare: "always", depthWriteEnabled: false },
         }),
       );
     }

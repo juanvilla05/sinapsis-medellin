@@ -5,6 +5,7 @@ import type { Cita, Respuesta } from "@/lib/analista/herramientas";
 import type { DatosRuta } from "@/lib/rutas/planear";
 import { emitir, escuchar } from "../bus";
 import type { PuntoNombrado, RutaPulso } from "../tipos";
+import CamarasRuta from "./CamarasRuta";
 import CampoLugar, { type ValorLugar } from "./CampoLugar";
 import { EJEMPLOS_RUTA, MODOS_RUTA, NOMBRE_MODO, PESOS_PUNTAJE, dentroDelValle, type ModoRuta } from "./constantes";
 import { fechaCorta } from "./fechas";
@@ -381,6 +382,7 @@ export default function PanelRutas({ onCerrar }: { onCerrar: () => void }) {
               {estado.rutas.map((r) => (
                 <li key={r.id}>
                   <TarjetaRuta ruta={r} elegida={elegida === r.id} onElegir={() => elegirRuta(r.id)} />
+                  {elegida === r.id && r.camaras && r.camaras.length > 0 && <CamarasRuta key={r.id} camaras={r.camaras} />}
                 </li>
               ))}
             </ul>

@@ -110,7 +110,7 @@ export function accionesMapa(herramienta: string, respuesta: unknown): EventoPul
       return [{ tipo: "rutas", rutas, origen: datos.origen, destino: datos.destino, ...(elegida ? { elegida } : {}) }];
     }
     case "controlarApp": {
-      const capas: CapaPulso[] = ["aire", "incidentes", "victimas", "hurto", "comunas"];
+      const capas: CapaPulso[] = ["aire", "camaras", "incidentes", "victimas", "hurto", "comunas"];
       switch (str(datos.accion)) {
         case "capa": {
           const capa = capas.find((c) => c === datos.capa);
