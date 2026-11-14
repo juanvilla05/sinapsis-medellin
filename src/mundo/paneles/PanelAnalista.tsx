@@ -59,6 +59,8 @@ interface EntradaDirecta {
   aviso: { motivo: "limite" | "error"; detalle: string } | null;
   /** pregunta libre sin IA que no coincide con una sugerida: solo se muestra el aviso, no se consulta nada */
   sinIa?: boolean;
+  /** respaldo de una pregunta que la IA no respondió: la pregunta ya está en el chat y no se repite */
+  respaldo?: boolean;
   /** índice del mensaje del chat tras el cual se muestra (para intercalar con la conversación con IA) */
   despuesDe: number;
 }
@@ -115,7 +117,7 @@ export default function PanelAnalista({
   const ultimaIntencion = useRef<{ pregunta: string; herramienta: NombreHerramienta; args: Record<string, unknown> } | null>(null);
   const finRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef(0); // mensajes del chat al momento de lanzar una consulta directa
-  const ejecutarDirectoRef = useRef<(p: string, h: NombreHerramienta, a: Record<string, unknown>) => void>(() => {});
+  const ejecutarDirectoRef = useRef<(p: string, h: NombreHerramienta, a: Record<string, unknown>, respaldo?: boolean) => void>(() => {});
   const onRespuestaRef = useRef<(() => void) | undefined>(undefined);
   const onResultadoRef = useRef<PropsPanelAnalista["onResultado"]>(undefined);
   const onTextoIaRef = useRef<PropsPanelAnalista["onTextoIa"]>(undefined);
@@ -140,12 +142,17 @@ export default function PanelAnalista({
         const t = textoDeMensaje(message);
         if (t) onTextoIaRef.current?.(t);
       }
+      if (isError && !isAbort) {
+        // La IA falló: se cae a modo directo con la misma intención. Si el corte llegó después de que la herramienta
+        // respondiera, su tarjeta ya está en pantalla y repetir la consulta la duplicaría.
+        const yaRespondio = message.role === "assistant" && message.parts.some((p) => isToolUIPart(p) && p.state === "output-available");
+        const u = ultimaIntencion.current;
+        if (u && !yaRespondio) ejecutarDirectoRef.current(u.pregunta, u.herramienta, u.args, true);
+      }
     },
     onError: () => {
-      // La IA no respondió (sin clave en caliente, cuota, red): avisamos y caemos a modo directo con la misma intención.
+      // La IA no respondió (sin clave en caliente, cuota, red): se avisa y las preguntas siguientes van en modo directo.
       setIaCaida(`La IA no respondió a las ${horaColombia()}. Las preguntas siguen en modo directo, con las mismas herramientas.`);
-      const u = ultimaIntencion.current;
-      if (u) ejecutarDirectoRef.current(u.pregunta, u.herramienta, u.args);
     },
   });
 
@@ -169,9 +176,9 @@ export default function PanelAnalista({
   const ocupado = chatOcupado || directoOcupado;
 
   const ejecutarDirecto = useCallback(
-    async (pregunta: string, herramienta: NombreHerramienta, args: Record<string, unknown>) => {
+    async (pregunta: string, herramienta: NombreHerramienta, args: Record<string, unknown>, respaldo = false) => {
       const id = ++contador.current;
-      setDirectos((ds) => [...ds, { id, pregunta, herramienta, args, estado: "cargando", respuesta: null, aviso: null, despuesDe: messagesRef.current }]);
+      setDirectos((ds) => [...ds, { id, pregunta, herramienta, args, estado: "cargando", respuesta: null, aviso: null, respaldo, despuesDe: messagesRef.current }]);
       let respuesta: RespuestaHerramienta<unknown> | null = null;
       let aviso: EntradaDirecta["aviso"] = null;
       try {
@@ -303,9 +310,11 @@ export default function PanelAnalista({
     const pintarDirecto = (d: EntradaDirecta) =>
       items.push(
         <div key={`d-${d.id}`} className="flex flex-col gap-2.5">
-          <Burbuja rol="user" oscuro={flotante}>
-            <p className="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-tinta">{d.pregunta}</p>
-          </Burbuja>
+          {!d.respaldo && (
+            <Burbuja rol="user" oscuro={flotante}>
+              <p className="m-0 whitespace-pre-wrap text-[14px] leading-relaxed text-tinta">{d.pregunta}</p>
+            </Burbuja>
+          )}
           <Burbuja rol="assistant" oscuro={flotante}>
             {d.sinIa && d.aviso && <AvisoRespuesta motivo="sin-clave" titulo="¿Me lo dices de otra forma?" detalle={d.aviso.detalle} compacto />}
             {!d.sinIa && d.estado === "cargando" && <Consultando nombre={NOMBRES_HERRAMIENTAS[d.herramienta]} oscuro={flotante} />}
