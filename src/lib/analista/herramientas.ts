@@ -7,6 +7,9 @@ import resumenJson from "@/data/resumen-catalogo.json";
 import { MEDATA_BASE, MEDATA_CATALOGO, type ConjuntoAuditado, type EstadoFrescura, type ResumenCatalogo } from "@/lib/catalogo";
 import { analizarEnVivo } from "@/lib/laboratorio";
 import { resumirEstaciones, type EstacionResumen, type ResumenAire } from "@/lib/aire";
+import { obtenerCamaras } from "@/lib/camaras";
+import { buscarCamara } from "@/lib/camaras-buscar";
+import { FUENTES_CAMARAS } from "@/lib/camaras-fuentes";
 import {
   consultarHurtoComuna as consultarHurtoComunaMonitoreo,
   consultarSeguridadVial as consultarSeguridadVialMonitoreo,
@@ -447,10 +450,11 @@ const planearRuta = definir<z.infer<typeof esquemaRuta>, DatosRuta>({
 
 /* ───────────── controlarApp (PulsoBot maneja la plataforma) ───────────── */
 
-const CAPAS_APP = ["aire", "incidentes", "victimas", "hurto", "comunas"] as const;
+const CAPAS_APP = ["aire", "camaras", "incidentes", "victimas", "hurto", "comunas"] as const;
 const SECCIONES_APP = { inicio: "/", alpujarra: "/alpujarra", monitoreo: "/monitoreo", laboratorio: "/laboratorio", frescura: "/frescura", analista: "/analista" } as const;
 const NOMBRE_CAPA_APP: Record<(typeof CAPAS_APP)[number], string> = {
   aire: "aire (PM2.5 de SIATA)",
+  camaras: "cámaras en vivo",
   incidentes: "incidentes viales",
   victimas: "víctimas en incidentes viales",
   hurto: "hurto a personas",
@@ -467,8 +471,8 @@ const NOMBRE_SECCION_APP: Record<keyof typeof SECCIONES_APP, string> = {
 
 const esquemaControl = z.object({
   accion: z
-    .enum(["capa", "vista", "tema", "recorrido", "vista-inicial", "abrir-rutas", "limpiar-rutas", "ir-a"])
-    .describe("capa: mostrar u ocultar una capa del mapa · vista: cambiar cómo se pinta el dato (puntos, comunas o una-comuna) · tema: claro u oscuro · recorrido: giro automático de la cámara · vista-inicial: volver a la vista general · abrir-rutas: abrir el planificador · limpiar-rutas: borrar rutas dibujadas · ir-a: abrir otra sección"),
+    .enum(["capa", "vista", "camara", "tema", "recorrido", "vista-inicial", "abrir-rutas", "limpiar-rutas", "ir-a"])
+    .describe("capa: mostrar u ocultar una capa del mapa · vista: cambiar cómo se pinta el dato (puntos, comunas o una-comuna) · camara: abrir la foto en vivo de una cámara por el nombre del lugar · tema: claro u oscuro · recorrido: giro automático de la cámara · vista-inicial: volver a la vista general · abrir-rutas: abrir el planificador · limpiar-rutas: borrar rutas dibujadas · ir-a: abrir otra sección"),
   capa: z.enum(CAPAS_APP).optional(),
   visible: z.boolean().optional().describe("true para mostrar la capa (por defecto), false para ocultarla"),
   vista: z
@@ -476,6 +480,7 @@ const esquemaControl = z.object({
     .optional()
     .describe("puntos: columnas de 250 m (puntos calientes) · comunas: toda la ciudad coloreada por comunas, sin columnas · una-comuna: solo una comuna, con sus columnas y su tarjeta"),
   comuna: z.string().optional().describe("para vista una-comuna: nombre o número de la comuna o corregimiento (por ejemplo 'Belén' o '16')"),
+  camara: z.string().min(2).max(80).optional().describe("para accion camara: nombre del lugar o dirección de la cámara (por ejemplo 'Puente Guayaquil' o 'Terminal del Norte')"),
   tema: z.enum(["claro", "oscuro"]).optional(),
   activo: z.boolean().optional().describe("recorrido encendido (por defecto) o apagado"),
   seccion: z.enum(["inicio", "alpujarra", "monitoreo", "laboratorio", "frescura", "analista"]).optional(),
@@ -490,6 +495,8 @@ export interface DatosControl {
   vista?: "puntos" | "comunas" | "una";
   /** código oficial de la comuna a aislar (vista "una") */
   comuna?: string;
+  /** id de la cámara que se abre (accion "camara") */
+  camara?: string;
   tema?: "claro" | "oscuro";
   activo?: boolean;
   ruta?: string;
@@ -507,20 +514,20 @@ function comunaParecida(texto: string): string | null {
 
 const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
   descripcion:
-    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, incidentes, víctimas, hurto, comunas), cambia la vista del mapa (puntos calientes en columnas, toda la ciudad por comunas o una sola comuna), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
+    "Maneja la plataforma PULSO Medellín por la persona: muestra u oculta capas del mapa 3D (aire, cámaras en vivo, incidentes, víctimas, hurto, comunas), cambia la vista del mapa (puntos calientes en columnas, toda la ciudad por comunas o una sola comuna), abre la foto en vivo de una cámara pública por el nombre del lugar (accion camara), cambia el tema claro u oscuro, enciende o apaga el recorrido de cámara, vuelve a la vista general, abre el planificador de rutas, borra rutas o abre otra sección (Agencia de datos, monitoreo, laboratorio, frescura). Úsala cuando pidan ver, mostrar, quitar, cambiar o abrir algo de la plataforma. No devuelve cifras.",
   esquema: esquemaControl,
   async ejecutar(a) {
     const listo = (datos: DatosControl): Respuesta<DatosControl> => ({ ok: true, datos, citas: [] });
     const falta = (detalle: string): Respuesta<DatosControl> => ({ ok: false, motivo: "sin-datos", detalle });
     switch (a.accion) {
       case "capa": {
-        if (!a.capa) return falta("Dime qué capa: aire, incidentes viales, víctimas, hurto o comunas.");
+        if (!a.capa) return falta("Dime qué capa: aire, cámaras en vivo, incidentes viales, víctimas, hurto o comunas.");
         const visible = a.visible ?? true;
         return listo({ accion: "capa", capa: a.capa, visible, texto: visible ? `Listo, te muestro en el mapa la capa de ${NOMBRE_CAPA_APP[a.capa]}.` : `Listo, oculté la capa de ${NOMBRE_CAPA_APP[a.capa]}.` });
       }
       case "vista": {
         if (!a.vista) return falta("Dime cómo quieres ver el mapa: por puntos, por comunas o una sola comuna.");
-        const dato = a.capa && a.capa !== "aire" && a.capa !== "comunas" ? a.capa : undefined;
+        const dato = a.capa && a.capa !== "aire" && a.capa !== "camaras" && a.capa !== "comunas" ? a.capa : undefined;
         const conDato = dato ? ` con ${NOMBRE_CAPA_APP[dato]}` : "";
         if (a.vista === "puntos") return listo({ accion: "vista", vista: "puntos", ...(dato ? { capa: dato } : {}), texto: `Listo, te muestro los puntos calientes en columnas de 250 metros${conDato}.` });
         if (a.vista === "comunas") return listo({ accion: "vista", vista: "comunas", ...(dato ? { capa: dato } : {}), texto: `Listo, te muestro Medellín por comunas${conDato}. Toca una comuna para ver su detalle.` });
@@ -534,6 +541,26 @@ const controlarApp = definir<z.infer<typeof esquemaControl>, DatosControl>({
           ...(c ? { comuna: c.codigo } : {}),
           texto: c ? `Listo, te muestro solo ${c.tipo === "comuna" ? "la comuna" : "el corregimiento"} ${c.nombre}${conDato}.` : "Listo, elige una comuna en el mapa o dime cuál quieres ver.",
         });
+      }
+      case "camara": {
+        if (!a.camara) return falta("Dime de qué lugar quieres ver la cámara, por ejemplo Puente Guayaquil o Terminal del Norte.");
+        const listado = await obtenerCamaras();
+        const { camara, parecidas } = buscarCamara(listado.camaras, a.camara);
+        if (!camara) {
+          const opciones = parecidas.map((c) => c.nombre);
+          return falta(
+            opciones.length > 0
+              ? `No encontré una cámara que se llame "${a.camara}". ${opciones.length === 1 ? `La más parecida es ${opciones[0]}` : `Las más parecidas son ${opciones.join(", ")}`}.`
+              : `No encontré una cámara que se llame "${a.camara}". Prueba con el nombre del lugar, por ejemplo Puente Guayaquil o Terminal del Norte, o pídeme mostrar las cámaras en el mapa.`,
+          );
+        }
+        const fuente = FUENTES_CAMARAS[camara.fuente];
+        return {
+          ok: true,
+          datos: { accion: "camara", camara: camara.id, texto: `Listo, te muestro la cámara ${camara.nombre}${camara.direccion ? `, en ${camara.direccion}` : ""}. Es la foto más reciente que publica ${camara.fuente === "simm" ? "la Secretaría de Movilidad" : "SIATA"}.` },
+          citas: [{ conjunto: fuente.nombre, campo: "última foto publicada por la cámara", url: fuente.url, licencia: fuente.licencia, fechaCorte: listado.consultado }],
+          ...(listado.aviso ? { nota: listado.aviso } : {}),
+        };
       }
       case "tema": {
         if (!a.tema) return falta("Dime si prefieres el tema claro o el oscuro.");

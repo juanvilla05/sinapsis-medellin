@@ -30,6 +30,18 @@ describe("intérprete sin IA", () => {
     assert.deepEqual(de("abre el laboratorio"), { herramienta: "controlarApp", args: { accion: "ir-a", seccion: "laboratorio" } });
     assert.deepEqual(de("inicia el recorrido"), { herramienta: "controlarApp", args: { accion: "recorrido", activo: true } });
   });
+  it("cámaras en vivo", () => {
+    assert.deepEqual(de("muéstrame la cámara de Puente Guayaquil"), { herramienta: "controlarApp", args: { accion: "camara", camara: "Puente Guayaquil" } });
+    assert.deepEqual(de("¿Cómo está la cámara de la Terminal del Norte ahora?"), { herramienta: "controlarApp", args: { accion: "camara", camara: "la Terminal del Norte" } });
+    assert.deepEqual(de("abre la cámara que hay en la Estación Cisneros, por favor"), { herramienta: "controlarApp", args: { accion: "camara", camara: "la Estación Cisneros" } });
+    assert.deepEqual(de("quiero ver la cámara del Zoológico en el mapa"), { herramienta: "controlarApp", args: { accion: "camara", camara: "Zoológico" } });
+    // sin lugar, o nombrando la fuente, es la capa completa
+    assert.deepEqual(de("muéstrame las cámaras en vivo"), { herramienta: "controlarApp", args: { accion: "capa", capa: "camaras", visible: true } });
+    assert.deepEqual(de("muestra las cámaras de Movilidad"), { herramienta: "controlarApp", args: { accion: "capa", capa: "camaras", visible: true } });
+    assert.deepEqual(de("quita las cámaras del mapa"), { herramienta: "controlarApp", args: { accion: "capa", capa: "camaras", visible: false } });
+    // la cámara del recorrido no es una cámara pública
+    assert.deepEqual(de("detén el recorrido de la cámara"), { herramienta: "controlarApp", args: { accion: "recorrido", activo: false } });
+  });
   it("vistas del mapa", () => {
     assert.deepEqual(de("muéstrame Medellín por comunas"), { herramienta: "controlarApp", args: { accion: "vista", vista: "comunas" } });
     assert.deepEqual(de("quiero ver los hurtos por comunas, sin tantas barras"), { herramienta: "controlarApp", args: { accion: "vista", vista: "comunas", capa: "hurto" } });

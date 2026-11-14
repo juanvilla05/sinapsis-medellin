@@ -119,13 +119,17 @@ export function accionesMapa(herramienta: string, respuesta: unknown): EventoPul
         case "vista": {
           const vista = datos.vista === "puntos" || datos.vista === "comunas" || datos.vista === "una" ? datos.vista : null;
           if (!vista) return [];
-          const dato = capas.find((c) => c === datos.capa && c !== "aire" && c !== "comunas");
+          const dato = capas.find((c) => c === datos.capa && c !== "aire" && c !== "camaras" && c !== "comunas");
           const codigo = str(datos.comuna);
           return [
             ...(dato ? [{ tipo: "capa" as const, capa: dato, visible: true }] : []),
             { tipo: "vista", vista },
             ...(vista === "una" && codigo ? [{ tipo: "comuna" as const, codigo }] : []),
           ];
+        }
+        case "camara": {
+          const id = str(datos.camara);
+          return id ? [{ tipo: "camara", id }] : [];
         }
         case "tema":
           return datos.tema === "claro" || datos.tema === "oscuro" ? [{ tipo: "tema", tema: datos.tema }] : [];
@@ -151,7 +155,7 @@ export function accionesMapa(herramienta: string, respuesta: unknown): EventoPul
 }
 
 /** ¿La acción deja algo nuevo a la vista en el mapa? (para avisar "te lo muestro en el mapa") */
-export const mueveElMapa = (eventos: EventoPulso[]) => eventos.some((e) => ["capa", "vista", "comuna", "estacion", "rutas", "vista-inicial", "recorrido"].includes(e.tipo));
+export const mueveElMapa = (eventos: EventoPulso[]) => eventos.some((e) => ["capa", "vista", "comuna", "estacion", "camara", "rutas", "vista-inicial", "recorrido"].includes(e.tipo));
 
 /* ───────────── Resumen para voz (modo directo) ───────────── */
 

@@ -81,6 +81,19 @@ function rutaEn(original: string): { origen: string; destino: string } | null {
   return null;
 }
 
+/** "la cámara de Puente Guayaquil", "cámara en la Terminal del Norte" → el lugar, tal como se escribió; null si no nombra ninguno. */
+function camaraEn(original: string): string | null {
+  const m = /\bc[aá]mara\s+(?:que\s+(?:hay|est[aá]|queda)\s+)?(?:de|del|en|por|sobre)\s+(.+)$/i.exec(original.replace(/[¿?¡!"“”«»]/g, " ").replace(/\s+/g, " ").trim());
+  if (!m) return null;
+  const lugar = m[1]!
+    .replace(/\b(en el mapa|en vivo|en pantalla|por favor|porfa|ahora mismo|ahora|ya)\b.*$/i, "")
+    .replace(/[\s.,;:]+$/, "")
+    .trim();
+  // "la cámara de movilidad" o "de SIATA" habla de la fuente, no de un lugar
+  if (lugar.length < 2 || /^(la |el |los |las )?(movilidad|transito|tr[aá]nsito|siata|simm|seguridad|medell[ií]n|ciudad|v[ií]as?|alcald[ií]a)$/i.test(lugar)) return null;
+  return lugar.slice(0, 80);
+}
+
 /** Devuelve la herramienta y los argumentos para una pregunta libre; null si no reconoce nada útil. */
 export function interpretar(pregunta: string): Intencion | null {
   const t = limpiar(pregunta);
@@ -94,6 +107,12 @@ export function interpretar(pregunta: string): Intencion | null {
   if (/\b(recorrido|gira|rota|tour|sobrevuel)/.test(t)) return { herramienta: "controlarApp", args: { accion: "recorrido", activo: !/\b(para|deten|quita|apaga|pausa|no)\b/.test(t) } };
   if (/\b(vista inicial|centra|reinicia el mapa|vuelve al inicio|vista general|aleja)/.test(t)) return { herramienta: "controlarApp", args: { accion: "vista-inicial" } };
   if (/\b(limpia|borra|quita)\b.*\bruta/.test(t)) return { herramienta: "controlarApp", args: { accion: "limpiar-rutas" } };
+  // cámaras en vivo: una por el nombre del lugar, o la capa completa
+  if (/\bcamaras?\b/.test(t)) {
+    const lugar = camaraEn(pregunta);
+    if (lugar) return { herramienta: "controlarApp", args: { accion: "camara", camara: lugar } };
+    return { herramienta: "controlarApp", args: { accion: "capa", capa: "camaras", visible: !/\b(oculta|esconde|quita|apaga|desactiva)\b/.test(t) } };
+  }
   // vistas del mapa: por comunas, una sola comuna o puntos calientes
   const datoVista = CAPAS.find(([r, c]) => c !== "comunas" && c !== "aire" && r.test(t))?.[1];
   const conDato = datoVista ? { capa: datoVista } : {};
