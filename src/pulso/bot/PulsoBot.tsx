@@ -71,7 +71,7 @@ export default function PulsoBot() {
   const [abierto, setAbierto] = useState(false);
   const [montado, setMontado] = useState(false); // el panel se monta al primer uso y se conserva al cerrar
   const [rutasAbiertas, setRutasAbiertas] = useState(false);
-  const [minimizado, setMinimizado] = useState(false); // solo en móvil: deja ver el mapa tras una acción
+  const [minimizado, setMinimizado] = useState(false); // en celular y tablet: deja ver el mapa tras una acción
   const [pregunta, setPregunta] = useState<{ id: number; texto: string } | undefined>(undefined);
   const [aviso, setAviso] = useState<{ id: number; texto: string } | null>(null);
   const [conversando, setConversando] = useState(false);
@@ -210,7 +210,7 @@ export default function PulsoBot() {
     abiertoAntes.current = abierto;
   }, [abierto]);
 
-  // Móvil: si la hoja se minimiza con el foco dentro, el foco pasa al botón para volver a la conversación.
+  // Celular y tablet: si la hoja se minimiza con el foco dentro, el foco pasa al botón para volver a la conversación.
   useEffect(() => {
     if (!abierto || !minimizado || !volverRef.current) return;
     const a = document.activeElement;
@@ -335,7 +335,7 @@ export default function PulsoBot() {
         aria-labelledby="pulsobot-titulo"
         className={`absolute inset-0 z-40 flex-col overflow-hidden bg-fondo text-tinta sm:inset-auto sm:top-[76px] sm:right-0 sm:bottom-0 sm:w-[420px] sm:rounded-tl-3xl sm:border-t sm:border-l sm:border-tinta/10 sm:shadow-[-20px_0_60px_rgba(0,0,0,.45)] ${
           abierto ? "flex" : "hidden"
-        } ${minimizado ? "max-sm:hidden" : ""}`}
+        } ${minimizado ? "max-xl:hidden" : ""}`}
       >
         <header className="flex shrink-0 items-center gap-3 border-b border-tinta/10 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
           <LogoPulsoBot tam="h-11 w-11" estado={estadoBot} latido={false} />
@@ -442,9 +442,10 @@ export default function PulsoBot() {
         </div>
       </section>
 
-      {/* Móvil: tras mover el mapa, el cajón se minimiza a esta barra para que se vea el mapa. */}
+      {/* Celular y tablet: tras mover el mapa, el cajón se minimiza a esta barra para que se vea el mapa. Por debajo de 1280 px
+          el cajón taparía la tarjeta de lo que se acaba de mostrar. En tablet la barra va arriba a la derecha, donde no tapa nada. */}
       {abierto && minimizado && (
-        <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-2xl border border-tinta/15 bg-fondo/95 p-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur sm:hidden">
+        <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center gap-3 rounded-2xl border border-tinta/15 bg-fondo/95 p-2 shadow-[0_10px_40px_rgba(0,0,0,.5)] backdrop-blur sm:inset-x-auto sm:top-[76px] sm:right-3 sm:bottom-auto sm:w-[360px] xl:hidden">
           <LogoPulsoBot tam="h-10 w-10" estado={estadoBot} latido={false} />
           <p className="m-0 min-w-0 flex-1 truncate text-[14px] leading-tight font-semibold text-tinta" role="status">
             {conversando ? textoEstado : "Te lo muestro en el mapa"}
